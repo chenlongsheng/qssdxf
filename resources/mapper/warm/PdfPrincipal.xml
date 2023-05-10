@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cdsoft.modules.warm.dao.PdfPrincipalDao">
+
+	<!-- 佛山隧道项目 -->
+	<select id="getPrincipalPhoneByTime" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select c.name,su.mobile phone
+		from t_alarm_log a
+		inner join
+		t_channel c on c.id = a.ch_id
+		inner join pdf_principal pp on pp.pdf_id = c.logic_org_id
+		INNER JOIN sys_user su ON
+		pp.user_id = su.id
+		where c.logic_org_id =478264466505469952 and occur_time &gt; date_format(DATE_SUB(NOW(), INTERVAL 1
+		DAY),'%Y-%m-%d 09:00:00') order by a.occur_time
+	</select>
+
+	<!-- 潮安的项目 -->
+	<select id="getPrincipalPhoneByPdfId" resultType="String">
+		select
+		mobile phone from
+	    sys_user  where id  = 1
+	</select>
+
+	<insert id="insertMessageLog">
+		insert into pdf_message_log(log_ch_id,type_id,name,time,status,level,dev_type,addr,alarm_value,message_type,content,phones
+		)
+		values(#{chId},#{typeId},#{name},now(),#{status},#{level},#{devType},#{addr},#{alarmValue},#{messageType},#{content},#{phones}
+		)
+	</insert>
+
+	<select id="checkExpirationTime" resultType="java.lang.Integer">
+		select ROUND(maxTime - diffTime,0) numTime from (
+		select pc.model_type,max(m.time),(now() - max(m.time)) maxTime,
+		UNIX_TIMESTAMP(date_add(concat('1970-01-01 ',pc.model_type ), interval 8 HOUR)) diffTime
+		from t_channel c
+		inner join
+		t_device d on d.id =c.dev_id
+		inner join pdf_code pc on pc.dev_type = d.dev_type and pc.status = 6
+		left join
+		pdf_message_log m on m.log_ch_id = c.id
+		where m.status = #{status} and m.log_ch_id = #{chId}
+		<if test="level !=null and level !=''">
+			and m.level = #{level}
+		</if>
+		) n
+	</select>
+
+	<select id="checkExpirationByChId" resultType="java.lang.String">
+		select phones from pdf_message_log where status = 1 and log_ch_id = #{chId} ORDER BY time desc limit 1
+	</select>
+
+	<select id="getCodeCount" resultType="java.lang.Integer">
+		select
+		case when tc.count is null or tc.count = '' or tc.type_id !=3 then 0 else tc.count end count
+
+		from t_channel c left join t_code tc on tc.id = c.ch_type and tc.type_id = c.type_id
+		where c.id = #{chId}
+
+	</select>
+
+</mapper>

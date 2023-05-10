@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cdsoft.modules.warm.dao.PdfOrderDealDao">
+
+    <insert id="addOrderDeal" parameterType="cn.cdsoft.modules.warm.entity.PdfOrderDeal">
+        insert into pdf_order_deal
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">
+                id,
+            </if>
+            <if test="sendUser != null and sendUser != ''">
+                send_user,
+            </if>
+            <if test="recieveUser != null and recieveUser != ''">
+                recieve_user,
+            </if>
+            <if test="content != null and content != ''">
+                content,
+            </if>
+            <if test="image != null and image != ''">
+                image,
+            </if>
+            <if test="type != null">
+                type,
+            </if>
+            <if test="orderId != null and orderId != ''">
+                order_id,
+            </if>
+            <if test="sendDate != null and sendDate != ''">
+                send_date,
+            </if>
+            <if test="replyId != null and replyId != ''">
+                reply_id,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">
+                #{id},
+            </if>
+            <if test="sendUser != null and sendUser != ''">
+                #{sendUser},
+            </if>
+            <if test="recieveUser != null and recieveUser != ''">
+                #{recieveUser},
+            </if>
+            <if test="content != null and content != ''">
+                #{content},
+            </if>
+            <if test="image != null and image != ''">
+                #{image},
+            </if>
+            <if test="type != null">
+                #{type},
+            </if>
+            <if test="orderId != null and orderId != ''">
+                #{orderId},
+            </if>
+            <if test="sendDate != null and sendDate != ''">
+                #{sendDate},
+            </if>
+            <if test="replyId != null and replyId != ''">
+                #{replyId},
+            </if>
+        </trim>
+    </insert>
+
+    <resultMap id="OrderDealMap" type="map">
+        <id property="sendUser" column="sendUser" javaType="String" />
+        <id property="recieveUser" column="recieveUser" javaType="String" />
+    </resultMap>
+
+    <select id="getDealList" parameterType="String" resultMap="OrderDealMap">
+        select d.*,e.send_date sd,e.content replyConent,e.image replyImage from (select a.id,a.reply_id replyId, a.send_user sendUser,b.name sendName,b.phone sendPhone,b.photo sendPhoto,
+        a.recieve_user recieveUser,c.name recieveName,c.phone recievePhone,c.photo recievePhoto,a.content,a.image,
+        a.type,a.order_id,DATE_FORMAT(a.send_date,'%Y-%m-%d %H:%i:%s') send_date
+        from pdf_order_deal a left join sys_user b on a.send_user = b.id
+        LEFT JOIN sys_user c on a.recieve_user = c.id where a.order_id =#{id}) d LEFT JOIN pdf_order_deal e on d.replyId = e.id
+        GROUP BY d.sendUser,d.recieveUser,DATE_FORMAT(d.send_date,'%Y-%m-%d %H:%i:%s') ORDER BY d.send_date asc
+    </select>
+
+    <update id="setReaded" parameterType="cn.cdsoft.modules.warm.entity.PdfOrderDeal">
+        update pdf_order_deal set is_read = 1 where order_id = #{orderId} and type = #{type}
+    </update>
+
+    <select id="countUnRead" parameterType="cn.cdsoft.modules.warm.entity.PdfOrderDeal" resultType="int">
+        select count(*) from pdf_order_deal where order_id = #{orderId} and type = #{type} and is_read = 0
+        <if test="recieveUser != null and recieveUser != ''">
+           and recieve_user = #{recieveUser}
+        </if>
+    </select>
+
+    <select id="getUnRead" parameterType="cn.cdsoft.modules.warm.entity.PdfOrderDeal" resultType="Map">
+        select *from pdf_order_deal where send_date = (select max(send_date)
+        from pdf_order_deal where order_id = #{orderId}
+        <if test="recieveUser != null and recieveUser != ''">
+            and (send_user= #{recieveUser} or recieve_user= #{recieveUser})
+        </if>
+         )
+    </select>
+
+    <select id="getOrderDeal" resultMap="OrderDealMap" parameterType="cn.cdsoft.modules.warm.entity.PdfOrderDeal">
+        select a.id,a.send_user sendUser,b.name sendName,b.phone sendPhone,b.photo sendPhoto,
+        a.recieve_user recieveUser,c.name recieveName,c.phone recievePhone,c.photo recievePhoto,
+        a.content,a.image,a.type,a.order_id orderId,DATE_FORMAT(a.send_date,'%Y-%m-%d %H:%i:%s') sendDate from pdf_order_deal a
+        LEFT JOIN sys_user b on a.send_user = b.id
+        LEFT JOIN sys_user c on a.recieve_user = c.id where (a.send_user = #{sendUser} or a.recieve_user = #{recieveUser}) and a.order_id = #{orderId} ORDER BY a.send_date desc
+    </select>
+
+    <select id="getMaxDate" parameterType="String" resultType="String">
+        select max(send_date) from (select d.*,e.send_date sd,e.content replyConent from (select a.id, a.send_user sendUser,b.name sendName,b.phone sendPhone,b.photo sendPhoto,
+        a.recieve_user recieveUser,c.name recieveName,c.phone recievePhone,c.photo recievePhoto,a.content,a.image,
+        a.type,a.order_id,DATE_FORMAT(a.send_date,'%Y-%m-%d %H:%i:%s') send_date
+        from pdf_order_deal a left join sys_user b on a.send_user = b.id
+        LEFT JOIN sys_user c on a.recieve_user = c.id where a.order_id =#{id}) d LEFT JOIN pdf_order_deal e on d.recieveUser = e.send_user
+        GROUP BY d.sendUser,d.recieveUser,DATE_FORMAT(d.send_date,'%Y-%m-%d %H:%i:%s') ORDER BY d.send_date asc) aa where type=1 GROUP BY sendUser
+    </select>
+
+
+    <select id="getDealByReplyId" parameterType="String" resultType="map">
+        SELECT * from pdf_order_deal where reply_id = #{id}
+    </select>
+
+</mapper>

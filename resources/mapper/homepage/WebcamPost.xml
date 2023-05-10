@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cdsoft.modules.homepage.dao.WebcamPostDao">
+
+
+	<update id="updataWebcam">
+
+		update t_real_data set real_value = #{realValue} ,warn = #{warn} ,real_time = NOW()
+		where id in (
+		select c.id from t_channel c inner join t_device d on d.id =c.dev_id
+		where c.ch_type = 1 and c.type_id = 9 and sn = #{sn}
+		)
+	</update>
+
+	<select id="getWebcam" resultType="java.lang.String">
+		select r.real_value value,r.warn from t_channel c
+		inner join t_real_data r on
+		r.id = c.id
+		where c.ch_type =1 and c.type_id = 9 limit 1
+	</select>
+
+	<select id="getVideos" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select concat(c.id) id,concat(o.name,ifnull(c.addr,'')) addr,c.name,c.play_url0 from t_device d
+		inner join t_channel c on
+		c.dev_id = d.id
+		inner join t_org o on o.id = c.logic_org_id
+		where dev_type = 109
+	</select>
+
+</mapper>

@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.qxz.dao.QxzDao">
+
+    <select id="findOrgByName" parameterType="cn.cdsoft.modules.settings.entity.TOrg" resultType="cn.cdsoft.modules.settings.entity.TOrg">
+          select id ,name,image from t_org where name = #{name} and TYPE =5
+    </select>
+
+    <select id="findQxzListByOrgId" parameterType="cn.cdsoft.modules.settings.entity.TOrg" resultType="cn.cdsoft.modules.settings.entity.TOrg">
+       select name ,id ,image from t_org where (id = #{id} or parent_ids like concat('%',#{id},'%')) and type = 7
+    </select>
+
+    <select id="getNewDataByOrgId" parameterType="String" resultType="Map">
+        select g.*,h.monad from (select d.*,e.history_value from (select c.ch_type,c.type_id, c.id,c.name,c.param0,c.param1,c.param2,max(r.history_time) history_time from t_history_data_final r
+					INNER JOIN t_channel c ON c.id=r.ch_id
+					where c.logic_org_id=#{orgId} GROUP BY c.id) d
+              LEFT JOIN t_history_data_final e on d.id = e.ch_id and d.history_time = e.history_time)g LEFT JOIN t_code h on g.ch_type = h.id and g.type_id = h.type_id
+    </select>
+
+    <select id="getFocusList" parameterType="String" resultType="cn.cdsoft.modules.settings.entity.TOrg" >
+        select b.name,b.id from qxz_focus a left join t_org b on a.org_id = b.id where a.user = #{user}
+    </select>
+
+    <insert id="addFocus" parameterType="cn.cdsoft.modules.qxz.entity.QxzFocus">
+          insert into qxz_focus (user,org_id) values(#{user},#{org_id})
+    </insert>
+
+    <select id="getDevTypeList" parameterType="cn.cdsoft.modules.settings.entity.TOrg" resultType="Map" >
+        select c.name typeName,c.id ,c.type_id typeId from t_device a LEFT JOIN t_org b on a.org_id = b.id
+        LEFT JOIN t_code c on a.dev_type = c.id and a.type_id = c.type_id
+        where b.id =#{id} or b.parent_ids like '%${id}%' group by a.dev_type,a.type_id
+    </select>
+
+    <resultMap id="orgListResult" type="map">
+        <id property="id" column="id" javaType="String" />
+        <id property="name" column="name" javaType="String" />
+    </resultMap>
+
+    <select id="getOrgList" resultMap="orgListResult">
+        select id,name  from t_org where id in
+        <foreach collection="array" open="(" separator="," close=")" item="haha">
+            #{haha}
+        </foreach>
+    </select>
+
+    <select id="getOrgById" parameterType="String" resultMap="orgListResult">
+        select id,name  from t_org where id = #{id}
+    </select>
+
+    <select id="findStation" parameterType="map" resultMap="orgListResult">
+        select b.id,b.name,b.image from t_device a
+       LEFT JOIN t_org b on a.org_id = b.id
+      where a.dev_type in
+        <foreach collection="qxzList" open="(" separator="," close=")" item="haha">
+            #{haha}
+        </foreach>
+      and a.type_id=1
+      and (a.org_id = #{id} or b.parent_ids like '%${id}%') GROUP BY b.name
+        <if test="pageNo !=null and pageSize !=null">
+            limit #{pageNo},#{pageSize}
+        </if>
+    </select>
+
+    <select id="countStation" parameterType="map" resultMap="orgListResult">
+        select b.id,b.name,b.image from t_device a
+        LEFT JOIN t_org b on a.org_id = b.id
+        where a.dev_type in
+        <foreach collection="qxzList" open="(" separator="," close=")" item="haha">
+            #{haha}
+        </foreach>
+        and a.type_id=1
+        and (a.org_id = #{id} or b.parent_ids like '%${id}%') GROUP BY b.name
+    </select>
+
+    <resultMap id="devListResult" type="map">
+        <id property="devId" column="devId" javaType="String" />
+        <id property="devName" column="devName" javaType="String" />
+        <id property="addr" column="addr" javaType="String" />
+        <id property="orgId" column="orgId" javaType="String" />
+        <id property="orgName" column="orgName" javaType="String" />
+    </resultMap>
+
+    <select id="findDevByTypeList" parameterType="Map"  resultMap="devListResult">
+        select a.name,a.image,a.id devId,a.addr,b.id orgId,b.name orgName,c.icon_skin iconSkin,c.warn_icon_skin warnIconSkin from t_device a
+        LEFT JOIN t_org b on a.org_id = b.id
+        Left join t_code c on a.dev_type = c.id
+        <where>
+            <if test="1==1">
+                and a.type_id =1
+            </if>
+            <if test="id !=null and id !=''">
+                and (a.org_id = #{id} or b.parent_ids like '%${id}%')
+            </if>
+            <if test="typeList !=null and typeList.length!=0">
+                AND a.dev_type in
+                <foreach collection="typeList" open="(" separator="," close=")" item="haha">
+                    #{haha}
+                </foreach>
+            </if>
+        </where>
+        limit #{pageNo},#{pageSize}
+    </select>
+
+    <select id="countDevByTypeList" parameterType="Map"  resultMap="devListResult">
+        select a.name,a.image,a.id devId,a.addr,b.id orgId,b.name orgName from t_device a
+        LEFT JOIN t_org b on a.org_id = b.id
+        <where>
+            <if test="1==1">
+                and a.type_id =1
+            </if>
+            <if test="id !=null and id !=''">
+                and (a.org_id = #{id} or b.parent_ids like '%${id}%')
+            </if>
+            <if test="typeList !=null and typeList.length!=0">
+                AND a.dev_type in
+                <foreach collection="typeList" open="(" separator="," close=")" item="haha">
+                    #{haha}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+
+
+    <select id="getNewData" resultType="map" parameterType="cn.cdsoft.modules.settings.entity.TOrg">
+        select g.*,h.monad from (select c.type_id, c.ch_type, c.id,c.name
+        ,r.history_value from t_history_data_final r
+        INNER JOIN t_channel c ON c.id=r.ch_id
+        INNER JOIN t_org d ON c.logic_org_id = d.id
+        inner join t_device e on e.id=c.dev_id
+        where (c.logic_org_id=#{id} or d.parent_ids like '%${id}%') and
+        e.dev_type in(163,164,165,166,167)	order by history_time desc limit 1000000)g
+        LEFT JOIN t_code h on g.ch_type = h.id and g.type_id = h.type_id
+        group by g.id
+    </select>
+    
+    <select id="countAlarmByChId" parameterType="String" resultType="int">
+        select count(*) from t_alarm_log where ch_id = #{chId} and status !=3
+    </select>
+
+    <select id="getNewDataByDevId" resultType="map" parameterType="String">
+       select k.* ,j.ch_id cId,j.status from(select g.*,h.monad from (select c.type_id, c.ch_type, c.id,c.name
+        ,r.history_value from t_history_data_final r
+        INNER JOIN t_channel c ON c.id=r.ch_id
+        INNER JOIN t_org d ON c.logic_org_id = d.id
+        inner join t_device e on e.id=c.dev_id
+        where e.id=#{id} order by history_time desc limit 1000000)g
+        LEFT JOIN t_code h on g.ch_type = h.id and g.type_id = h.type_id
+        group by g.id)k
+        LEFT JOIN t_alarm_log j on k.id = j.ch_id where j.ch_id is  null or j.status !=3 GROUP BY k.id
+    </select>
+
+    <select id="getDevById" parameterType="String" resultType="map">
+        select a.name ,a.addr ,a.dev_type devType,a.unit_type unitType,b.name typeName from t_device a left JOIN
+        t_code b on a.dev_type = b.id where a.id = #{id}
+    </select>
+    
+    <select id="getParentIds" parameterType="String" resultType="String">
+        select a.parent_ids from t_org a LEFT JOIN t_device b on a.id = b.org_id where b.id =#{id}
+    </select>
+
+    <select id="getPlotsBydevId" parameterType="map" resultType="String">
+        select id from t_org where (id in
+        <foreach collection="orgList" open="(" separator="," close=")" item="haha">
+            #{haha}
+        </foreach>
+         or id =
+      (select a.id from t_org a LEFT JOIN t_device b on a.id = b.org_id where b.id = #{id})) and type =5
+    </select>
+
+    <select id="getCodeById" parameterType="String" resultType="map">
+        select id,name from t_code where id = #{id}
+    </select>
+    
+    <select id="getStationBydevId" parameterType="String" resultType="map">
+        select a.name,a.image from t_org a left join t_device b on a.id = b.org_id where b.id = #{id}
+    </select>
+
+    <select id="getDev" parameterType="String" resultType="map">
+        select a.image,a.name ,a.addr ,b.name orgName from t_device a left JOIN
+        t_org b on a.org_id = b.id where a.id = #{id}
+    </select>
+</mapper>

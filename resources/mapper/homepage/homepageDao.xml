@@ -1,0 +1,476 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cdsoft.modules.homepage.dao.HomepageDao">
+
+	<select id="getVisibleOrg" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		concat(id) id,
+		name,
+		coords_x coordsX,
+		coords_y
+		coordsY
+		from t_org
+		where
+		parent_ids like concat('%','295854452555456325','%')
+		and type = 6 and del_flag = 0 order by id
+	</select>
+
+	<select id="getVisibleOrg1" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		concat(o.id) id,
+		o.name,
+		o.coords_x coordsX,
+		o.coords_y coordsY,
+
+		(select COUNT(tal.id) id
+		FROM
+		t_real_data tal
+		inner join t_channel tc
+		on tal.id = tc.id
+		LEFT JOIN t_device d on tc.dev_id = d.id
+		left join t_device_detail dd on dd.id = tc.dev_id
+		inner join t_org oo	on tc.logic_org_id = oo.id
+		where
+		oo.parent_ids like CONCAT('%',o.id,'%') and tc.ch_type != 21 and
+		(tal.warn>0 or (dev_type in (156,173,1004) and dd.online= 0 and (tal.confirm_time is  null or tal.confirm_time &lt; tal.real_time))) ) count
+
+		from t_org o
+		where
+		parent_ids like concat('%','295854452555456325','%')
+		and type = 6 and del_flag = 0 order by id 
+	</select>
+
+	<select id="getWarterOrg" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		concat(oo.id) id,
+		oo.name,
+		oo.coords_x coordsX,
+		oo.coords_y coordsY
+		from
+		t_org oo inner join
+		t_org o on oo.id = o.parent_id
+		inner join
+		t_device d on d.org_id = o.id
+		where d.dev_type in (156,173)
+		GROUP BY oo.id order by oo.id
+	</select>
+
+	<select id="getDevByType" parameterType="map" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		concat(tc.id) as id,
+		tc.name,
+		tc.logic_org_id
+		orgId,
+		tc.ch_type devType,
+		tc.type_id typeId,
+		tc.coords_x coordsX,
+		tc.coords_y coordsY
+		from t_channel tc
+		left join
+		pdf_dev_code c
+		on tc.ch_type = c.code_id and tc.type_id = c.code_type_id
+		where tc.ch_type = #{type}
+	</select>
+
+	<select id="getFloorByBuilding" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		concat(id) as id,
+		name
+		from t_org where
+		parent_ids like concat('%',#{orgId},'%')
+	</select>
+
+	<select id="getTypeByFloor" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		b.name,
+		b.id,
+		b.type_id typeId
+		from t_device a left join t_code b on a.dev_type=b.id and a.type_id=b.type_id
+		<where>
+			a.org_id in
+			<foreach collection="array" index="index" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</where>
+		group by b.id,b.type_id
+	</select>
+
+	<select id="getDevByFloor" parameterType="cn.cdsoft.modules.homepage.vo.ChangeSwitchVO"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select
+		concat(id) id,
+		name
+		from t_device
+		where org_id in
+		<foreach collection="array" index="index" item="item" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+		and dev_type = #{codeId} and type_id = #{typeId}
+	</select>
+
+	<select id="getAllDevByFloor" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		c.icon_skin iconSkin,
+		c.warn_icon_skin
+		warnIconSkin,
+		concat(a.id) id,
+		a.name,
+		a.addr,
+		b.online,
+		(a.coords_x-30) coordsX,
+		(a.coords_y-70) coordsY,
+		b.ip,
+		a.firmware_version
+		firmwareVersion,
+		b.mac,
+		a.vendor_information vendorInformation,
+		c.name devType,
+		a.unit_type unitType
+		from t_device a
+		left join t_device_detail b on a.id=b.id
+		left join t_code c on a.dev_type = c.id and
+		a.type_id = c.type_id
+		where a.org_id = #{orgId} and a.dev_type != 131		
+		
+	</select>
+
+
+	<select id="getAllChannelByFloor" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		c.icon_skin iconSkin,
+		c.warn_icon_skin
+		warnIconSkin,
+		c.offline_icon_skin offlineIconSkin,
+		concat(tc.id) id,
+		tc.name,
+		(tc.coords_x+290) coordsX,
+		(tc.coords_y-70)
+		coordsY,
+		c.name devType,
+		a.addr,
+		b.online,
+		b.ip,
+		a.firmware_version firmwareVersion,
+		b.mac,
+		a.vendor_information
+		vendorInformation,
+		a.unit_type unitType
+		from t_channel tc
+		left join t_code c
+		on tc.ch_type=c.id and tc.type_id = c.type_id
+		left join t_device a on a.id = tc.dev_id
+		left join t_device_detail b on a.id=b.id
+		where tc.logic_org_id = #{orgId} and
+		tc.type_id in (2,3,4,9,13)
+	</select>
+
+
+	<select id="getNewDataByDev" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select d.id chId,
+		d.real_value historyValue,
+		case when d.real_time &lt;= DATE_SUB(NOW(),INTERVAL 2 DAY) then 0 ELSE 1 end
+		online,
+		'' name,f.monad,d.warn,e.param0,e.param1,e.param2
+		from
+		(select * from t_real_data where id
+		in
+		(select max(a.id) from
+		t_real_data a left join t_channel b on a.id = b.id
+		left join t_device c on b.dev_id = c.id
+		where
+		c.id = #{devId} group by b.id)) d
+		left join t_channel e on d.id= e.id
+		left join t_device_detail dd on dd.id = e.dev_id
+		left join t_code f on e.ch_type = f.id and e.type_id=f.type_id
+	</select>
+
+	<select id="getChannelRealData" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		tc.id chId,
+		trd.real_value historyValue,
+		tc.name,
+		tcode.monad,
+		trd.warn,
+		tc.param0,
+		tc.param1,
+		tc.param2
+		from
+		t_channel tc
+		inner join
+		t_real_data trd
+		on tc.id = trd.id
+		left join t_code tcode
+		on tc.ch_type = tcode.id and tc.type_id = tcode.type_id
+		where tc.id = #{channelId}
+	</select>
+
+	<select id="getViewdeo" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select a.dest_id destId,e.id from t_id_link_id a left
+		join t_channel b on a.src_id = b.id
+		left join t_device c on b.dev_id = c.id
+		left join t_channel d on a.dest_id = d.id
+		left join t_device e on d.dev_id = e.id
+		where b.dev_id = #{devId}
+	</select>
+
+	<select id="getFireHost" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		a.id,
+		a.name
+		from t_device a
+		left join t_org b on
+		a.org_id = b.id
+		where
+		a.dev_type = 131 and a.type_id = 1
+		and (a.org_id = #{orgId} or b.parent_ids like
+		concat('%',#{orgId},'%'))
+	</select>
+
+	<select id="getChByDev" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		tc.id,
+		IFNULL(tc.addr,'') addr,
+		c.name
+		from
+		t_channel tc
+		left join t_code c on c.id = tc.ch_type and c.type_id = tc.type_id
+		where tc.dev_id =#{devId}
+	</select>
+
+	<select id="getChStatus" parameterType="String" resultType="int">
+		select status from t_alarm_log where occur_time =
+		(select max(occur_time) from t_alarm_log where ch_id = #{chId})
+		and ch_id =#{chId}
+	</select>
+
+	<select id="getDevByFireHost" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		tc.id,
+		IFNULL(tc.addr,'') addr,
+		c.name,
+		b.name orgName,
+		IFNULL(tr.warn,0) warn,
+		tdd.`online`
+		from t_device a
+		left join t_channel tc on a.id = tc.dev_id
+		left join
+		t_device_detail tdd on tdd.id = a.id
+		left join t_code c on c.id = tc.ch_type and c.type_id = tc.type_id
+		left join
+		t_real_data tr on tr.id = tc.id
+		left join t_org b on tc.logic_org_id = b.id
+		where a.id = #{devId}
+	</select>
+
+	<select id="getFirstFloor" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		concat(id) id,
+		name
+		from t_org
+		where parent_id = #{orgId} and order_no = 1
+	</select>
+
+	<select id="getViedioByDev" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		a.id,
+		a.name,
+		a.outer_id
+		from t_channel a left
+		join t_device b on a.dev_id = b.id
+		where b.id = #{devId} and a.ch_type = 1 and a.type_id = 9
+	</select>
+
+	<select id="getVideoByChannelId" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		a.id,
+		a.name,
+		a.outer_id
+		from
+		t_channel a
+		where
+		a.id = #{channelId} and a.type_id = 9
+	</select>
+
+	<update id="changeSwitch" parameterType="cn.cdsoft.modules.homepage.vo.ChangeDevSwitchVO">
+		update t_device set switch = #{value} where id = #{devId}
+	</update>
+
+	<update id="updateDevStatus" parameterType="map">
+		update t_device set dev_state = #{devStatus} where id = #{devId}
+	</update>
+
+	<select id="getBuildingAlarmList" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		select
+		tal.id,
+		date_format(tal.real_time, '%Y-%m-%d %h:%i:%s') occurTime,
+		case when dev_type in (156,173) then dd.bus_addr else
+		tc.ch_no end chNo,
+		oo.name orgName,
+		concat(oo.id) orgId,
+		tcode.name typeName,
+		IFNULL(FORMAT((real_value-param2)/param1,param0),0) realValue,
+		
+		case 
+		when dev_type in (156,173,1004,1019) and dd.online = 0 then '设备离线'
+		when dev_type in (131,178) and tal.real_value in (4) then CONCAT("设备故障")
+		when dev_type in (1004) and tal.real_value in (2) then CONCAT("低电量报警")
+		when tal.warn > 0 then '设备报警'		
+		else '设备正常' end alarmType
+
+		from
+		t_real_data tal
+		inner join t_channel tc on tal.id = tc.id
+		left join t_device d on tc.dev_id = d.id
+		left join t_device_detail dd on dd.id= d.id
+		inner join t_org oo on tc.logic_org_id = oo.id
+		inner join t_code tcode on
+		tc.ch_type = tcode.id and tc.type_id = tcode.type_id
+		where (tal.warn >0 or (dev_type in
+		(156,173,1004,1019) and (dd.online = 0 or tal.real_value = 2 ) and  (tal.confirm_time is  null or tal.confirm_time &lt; tal.real_time) ) ) and tc.ch_type != 21 and oo.code like
+		concat((select ooo.code from t_org ooo where ooo.id = #{buildId}),'%') ORDER BY tal.real_time desc
+	</select>
+
+
+	<!-- 新写接口 -->
+	<select id="getMainDevList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select
+		td.id devId,
+		IFNULL(tc.addr,'') addr,
+		c.name chTypeName,
+		case when
+		tdd.online = 0 then 0
+		when tr.real_value in (4,5) then 0 else 1 end online,
+		case when warn > 0 then 1 else 0 end warn
+		from t_device td
+		inner join t_channel tc on tc.dev_id = td.id
+		LEFT JOIN t_org o on o.id = tc.logic_org_id
+		LEFT JOIN t_device_detail tdd on tdd.id = td.id
+		LEFT JOIN t_code c on c.id
+		=tc.ch_type and tc.type_id = c.type_id
+		left join t_real_data tr on tr.id= tc.id
+		where
+		o.parent_ids like
+		CONCAT('%',#{orgId},'%') and td.dev_type in (131,1004) and tc.ch_type != 21
+		order by online,warn desc
+	</select>
+
+	<select id="getMainframeList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select
+		d.id devId, IFNULL(d.addr,'') addr,d.name,
+		IFNULL((select r.real_value from t_real_data r where r.id = c.id and c.ch_type = 21 limit 1),0) realValue
+		from t_org o
+		INNER JOIN t_channel c on c.logic_org_id = o.id
+		INNER JOIN t_device d on d.id = c.dev_id
+		where o.id = #{orgId} or o.parent_id = #{orgId} and d.dev_type = 131 GROUP BY d.id
+	</select>
+
+
+	<select id="getBuildingIdByChannelId" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT
+		(
+		SELECT CONCAT(torg.id,'') FROM t_org torg WHERE torg.code = substring(too.code,1,12)
+		) buildingId,
+		(
+		SELECT torg.name FROM t_org torg WHERE torg.code = substring(too.code,1,12)
+		) buildingName
+		FROM t_channel tc
+		INNER JOIN t_org
+		too
+		ON tc.logic_org_id = too.id
+		WHERE tc.id = #{chId}
+	</select>
+
+
+	<select id="getChannelByFloor" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select
+		d.dev_type devType,
+		d.id devId,
+		c.id chId,
+		case when dev_type in (156,173) then dd.bus_addr else
+		c.ch_no end chNo,
+		c.ch_type chType,
+		c.type_id typeId,
+		c.outer_id outerId,
+		IFNULL(co.monad,'') monad,
+		dd.mac,
+		dd.ip,
+		dd.port,
+		dd.uname,
+		dd.upwd,
+		case when d.dev_type in (156,173) then IFNULL(d.addr,'')
+		else IFNULL(c.addr,'')  end addr,
+		co.name
+		codeName,
+		(c.coords_x-35) coordsX,
+		(c.coords_y-70) coordsY,
+		IFNULL(r.warn,0) warn,	
+			
+		IFNULL(FORMAT((r.real_value-param2)/c.param1,c.param0),0) realValue,		
+		case when dev_type =131 and r.real_value in (4,5,7,8) then 0
+		when dev_type in (156,173,1004,1019) and dd.online = 0 then 0		
+		else 1 end status,
+			
+		case 
+		when dev_type in (156,173,1004,1019) and dd.online = 0 then '设备离线'
+		when dev_type in (131,178) and r.real_value in (4) then CONCAT("设备故障")
+		when dev_type in (1004) and r.real_value in (2) then CONCAT("低电量报警")
+		when r.warn > 0 then '设备报警'		
+		else '设备正常' end warningName,		
+		
+
+		case when dev_type =131 and r.real_value in (4,5) then CONCAT(#{fiPath},co.defence_icon_skin)
+		when dev_type = 131 and r.real_value in (7,8) then CONCAT(#{fiPath},co.withdrawing_icon_skin)
+		when dev_type in (156,173,1004,1019) and dd.online = 0 then CONCAT(#{fiPath},co.offline_icon_skin)
+	
+		when r.warn > 0 then CONCAT(#{fiPath},co.warn_icon_skin)
+		else CONCAT(#{fiPath},co.icon_skin) end iconSkin
+
+		from
+		t_channel c
+		LEFT JOIN t_device d on c.dev_id = d.id
+		left join t_device_detail dd on dd.id = d.id
+		LEFT JOIN t_code co on
+		c.ch_type=co.id and c.type_id = co.type_id
+		left join t_real_data r on r.id = c.id
+		where c.logic_org_id = #{orgId}
+	</select>
+
+
+	<select id="getFirstOrg" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select
+		*
+		from t_org
+		where
+		(id = #{orgId} or parent_ids like CONCAT('%',#{orgId},'%'))
+		and type = 7 ORDER BY order_no limit 1
+	</select>
+
+
+	<select id="getDeviceDetails" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select c.addr,case when dev_type = 131 then tc.name else d.name end name,
+		case when dev_type =131 and tal.real_value in (4) then '故障'
+		when dev_type =131 and tal.real_value in (5) then '屏蔽'
+		when dev_type =131 and tal.real_value in (7) then '反馈'
+		when dev_type =131 and tal.real_value in (8) then '动作'
+		when
+		dev_type in (156,173) and tal.real_time &lt;= DATE_SUB(NOW(),INTERVAL 2 DAY) then '离线'
+		when warn >0 then '报警'
+		else '正常' end alarmName,
+
+		case when d.dev_type in (156,173) then bus_addr else
+		c.ch_no end chNo
+
+		from t_device d left join t_device_detail dd on dd.id =d.id
+		inner join t_channel c on c.dev_id = d.id
+		left join t_code tc on tc.id = c.ch_type and tc.type_id = c.type_id
+		inner join t_org o on o.id = c.logic_org_id
+		left join t_real_data tal on tal.id = c.id
+		where o.parent_ids like CONCAT('%','295854452555456325','%') and type = 7 ORDER BY o.parent_id,ch_type,o.order_no
+	</select>
+	
+	
+	
+</mapper>

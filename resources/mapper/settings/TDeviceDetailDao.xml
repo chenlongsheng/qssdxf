@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.settings.dao.TDeviceDetailDao">
+    
+	<sql id="tDeviceDetailColumns">
+		a.id AS "id",
+		a.ip AS "ip",
+		a.port AS "port",
+		a.uname AS "uname",
+		a.upwd AS "upwd",
+		a.mac AS "mac",
+		a.gateway AS "gateway",
+		a.mask AS "mask",
+		a.imei AS "imei",
+		a.outer_id AS "outerId",
+		a.ext_param AS "extParam",
+		a.bus_addr AS "busAddr"
+	</sql>
+	
+	<sql id="tDeviceDetailJoins">
+	</sql>
+	
+    
+	<select id="get" resultType="TDeviceDetail" >
+		SELECT 
+			<include refid="tDeviceDetailColumns"/>
+		FROM t_device_detail a
+		<include refid="tDeviceDetailJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="TDeviceDetail" >
+		SELECT 
+			<include refid="tDeviceDetailColumns"/>
+		FROM t_device_detail a
+		<include refid="tDeviceDetailJoins"/>
+		<where>
+			
+			<if test="id != null and id != ''">
+				AND a.id = #{id}
+			</if>
+			<if test="ip != null and ip != ''">
+				AND a.ip = #{ip}
+			</if>
+			<if test="port != null and port != ''">
+				AND a.port = #{port}
+			</if>
+			<if test="uname != null and uname != ''">
+				AND a.uname = #{uname}
+			</if>
+			<if test="upwd != null and upwd != ''">
+				AND a.upwd = #{upwd}
+			</if>
+			<if test="mac != null and mac != ''">
+				AND a.mac = #{mac}
+			</if>
+			<if test="gateway != null and gateway != ''">
+				AND a.gateway = #{gateway}
+			</if>
+			<if test="mask != null and mask != ''">
+				AND a.mask = #{mask}
+			</if>
+			<if test="outerId != null and outerId != ''">
+				AND a.outer_id = #{outerId}
+			</if>
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="TDeviceDetail" >
+		SELECT 
+			<include refid="tDeviceDetailColumns"/>
+		FROM t_device_detail a
+		<include refid="tDeviceDetailJoins"/>
+		<where>
+			
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO t_device_detail(
+			id,
+			ip,
+			port,
+			uname,
+			upwd,
+			mac,
+			gateway,
+			mask,
+			imei,
+			outer_id,
+			ext_param
+		) VALUES (
+			#{deviceId},
+			#{ip},
+			#{port},
+			#{uname},
+			#{upwd},
+			#{mac},
+			#{gateway},
+			#{mask},
+			#{imei},
+			#{outerId},
+			#{extParam}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE t_device_detail SET 	
+			ip = #{ip},
+			port = #{port},
+			uname = #{uname},
+			upwd = #{upwd},
+			mac = #{mac},
+			gateway = #{gateway},
+			mask = #{mask},
+			imei = #{imei},
+			outer_id = #{outerId},
+			ext_param = #{extParam}
+		WHERE id = #{id}
+	</update>
+	
+	
+	<!--物理删除-->
+	<update id="delete">
+		DELETE FROM t_device_detail
+		WHERE id = #{id}
+	</update>
+	
+	<!--逻辑删除-->
+	<update id="deleteByLogic">
+		UPDATE t_device_detail SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+	
+	<!-- 根据实体名称和字段名称和字段值获取唯一记录 -->
+	<select id="findUniqueByProperty" resultType="TDeviceDetail" statementType="STATEMENT">
+		select * FROM t_device_detail  where ${propertyName} = '${value}'
+	</select>
+	
+
+	
+	
+	
+</mapper>

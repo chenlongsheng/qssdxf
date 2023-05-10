@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.settings.dao.TCodeTypeDao">
+    
+	<sql id="tCodeTypeColumns">
+		a.id AS "id",
+		a.type_name AS "typeName",
+		a.type_desc AS "typeDesc"
+	</sql>
+	
+	<sql id="tCodeTypeJoins">
+	</sql>
+	
+    
+	<select id="get" resultType="TCodeType" >
+		SELECT 
+			<include refid="tCodeTypeColumns"/>
+		FROM t_code_type a
+		<include refid="tCodeTypeJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="TCodeType" >
+		SELECT 
+			<include refid="tCodeTypeColumns"/>
+		FROM t_code_type a
+		<include refid="tCodeTypeJoins"/>
+		<where>
+			
+			<if test="id != null and id != ''">
+				AND a.id = #{id}
+			</if>
+			<if test="typeName != null and typeName != ''">
+				AND a.type_name like concat('%',#{typeName},'%')
+			</if>
+			<if test="typeDesc != null and typeDesc != ''">
+				AND a.type_desc like concat('%',#{typeDesc},'%')
+			</if>
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="TCodeType" >
+		SELECT 
+			<include refid="tCodeTypeColumns"/>
+		FROM t_code_type a
+		<include refid="tCodeTypeJoins"/>
+		<where>
+			
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO t_code_type(
+			
+			type_name,
+			type_desc
+		) VALUES (
+			
+			#{typeName},
+			#{typeDesc}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE t_code_type SET 	
+			type_name = #{typeName},
+			type_desc = #{typeDesc}
+		WHERE id = #{id}
+	</update>
+	
+	
+	<!--物理删除-->
+	<update id="delete">
+		DELETE FROM t_code_type
+		WHERE id = #{id}
+	</update>
+	
+	<!--逻辑删除-->
+	<update id="deleteByLogic">
+		UPDATE t_code_type SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+	
+	<!-- 根据实体名称和字段名称和字段值获取唯一记录 -->
+	<select id="findUniqueByProperty" resultType="TCodeType" statementType="STATEMENT">
+		select * FROM t_code_type  where ${propertyName} = '${value}'
+	</select>
+	
+</mapper>

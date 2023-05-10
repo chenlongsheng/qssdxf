@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.maintenance.dao.PdfMaintenanceDao">
+
+	<insert id="saveMaintenance" useGeneratedKeys="true" keyProperty="id" parameterType="PdfMaintenance">
+		INSERT INTO pdf_maintenance(
+		id,
+		name,
+		type,
+		address,
+		is_enable,
+		remark,
+		create_date,
+		update_date
+		) VALUES (
+		#{id},
+		#{name},
+		#{type},
+		#{address},
+		#{isEnable},
+		#{remark},
+		#{createDate},
+		#{updateDate}
+		)
+	</insert>
+
+	<update id="update">
+		update pdf_maintenance set
+		name=#{name},
+		type=#{type},
+		address=#{address},
+		is_enable=#{isEnable},
+		remark=#{remark},
+		update_date=#{updateDate}
+		where id = #{id}
+	</update>
+
+	<select id="get" resultType="PdfMaintenance">
+		SELECT
+		a.id,
+		a.name,
+		a.type,
+		a.address,
+		a.is_enable AS isEnable,
+		a.remark,
+		a.create_date AS
+		createDate,
+		a.update_date AS
+		updateDate
+		FROM pdf_maintenance a
+		where a.id=#{id}
+	</select>
+
+	<select id="findMaintenList" resultType="PdfMaintenance">
+		SELECT
+		a.id,
+		a.name,
+		a.type,
+		a.address,
+		a.is_enable AS isEnable,
+		a.remark,
+		a.create_date AS createDate,
+		a.update_date AS
+		updateDate
+		FROM pdf_maintenance a
+		<where>
+			<if test="orgParentId !=null and orgParentId !=''">
+				and a.id in (SELECT maintenance_id from pdf_maintenance_detail where org_parent_id in
+				(select id from t_org where code like concat((select code from t_org where id = #{orgParentId}),'%') and type = 4))
+			</if>
+			<if test="aptitude != null and aptitude !='' and aptitude ==0">
+				and a.id in (SELECT maintenance_id from pdf_maintenance_aptitude)
+			</if>
+			<if test="aptitude != null and aptitude !='' and aptitude ==1">
+				and a.id not in (SELECT maintenance_id from pdf_maintenance_aptitude)
+			</if>
+			<if test="codeId != null and codeId !=''">
+				and a.id in(SELECT maintenance_id from pdf_maintenance_code a where a.code_id =#{codeId} and a.type_id
+				=#{typeId} GROUP
+				BY maintenance_id)
+			</if>
+			<if test="timeStart != null and timeStart !=''">
+				AND a.id in (SELECT a.maintenance_id from pdf_maintenance_detail a where a.time_start
+				&gt;=concat(#{timeStart}) GROUP BY a.maintenance_id)
+			</if>
+			<if test="timeStop != null and timeStop != ''">
+				AND a.id in (SELECT a.maintenance_id from pdf_maintenance_detail a where a.time_stop &lt;=
+				concat(#{timeStop},'23:59:59') GROUP BY a.maintenance_id)
+			</if>
+			<if test="name != null and name != ''">
+				a.name like concat('%',#{name},'%')
+			</if>
+			<if test="type != null and type != ''">
+				a.type = #{type}
+			</if>
+			<if test="isEnable != null and isEnable != ''">
+				a.is_enable = #{isEnable}
+			</if>
+			<if test="contacts != null and contacts != ''">
+				a.id in (SELECT maintenance_id from pdf_maintenance_detail where contacts like
+				concat('%',#{contacts},'%'))
+			</if>
+			<if test="phone != null and phone != ''">
+				a.id in (SELECT maintenance_id from pdf_maintenance_detail where phone like concat('%',#{phone},'%') or
+				telephone like
+				concat('%',#{phone},'%') GROUP BY maintenance_id)
+			</if>
+		</where>
+		order by create_date
+	</select>
+
+	<select id="findPicList" resultType="java.lang.String">
+		SELECT b.url as url from pdf_maintenance a inner join
+		pdf_maintenance_aptitude b
+		on a.id = b.maintenance_id
+		where a.id = #{maintenanceId}
+	</select>
+
+
+	<delete id="deleteById">
+		DELETE FROM pdf_maintenance
+		WHERE id = #{id}
+	</delete>
+
+
+	<select id="selectMainCodeList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT
+		id,
+		code_id as codeId,
+		type_id as typeId,
+		org_id as orgId,
+		order_no as orderNo
+		from pdf_maintenance_code where maintenance_id =#{maintenanceId}
+	</select>
+
+
+	<select id="secondOrder" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select min(order_no) as orderNo,concat(id) as id from pdf_maintenance_code
+		where order_no !=1
+		and org_id =#{orgId} and code_id =#{codeId}
+		and type_id =#{typeId}
+	</select>
+
+
+	<update id="updateMainOrder">
+		update pdf_maintenance_code set order_no = 1 where id =#{id}
+	</update>
+
+
+
+
+
+
+
+
+
+
+</mapper>

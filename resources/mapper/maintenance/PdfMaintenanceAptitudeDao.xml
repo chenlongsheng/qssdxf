@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.maintenance.dao.PdfMaintenanceAptitudeDao">
+    <insert id="insert">
+		INSERT INTO pdf_maintenance_aptitude(
+			id,
+			maintenance_id,
+			url
+		) VALUES (
+			#{id},
+			#{maintenanceId},
+			#{url}
+		)
+	</insert>
+
+	<delete id="delByMaintId">
+		DELETE FROM pdf_maintenance_aptitude
+		WHERE maintenance_id = #{maintenanceId}
+	</delete>
+
+</mapper>

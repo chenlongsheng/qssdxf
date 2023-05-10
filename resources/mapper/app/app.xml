@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.app.dao.AppDao">
+
+   <select id="getOrgList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select
+		CONCAT(oo.id) id,
+		CONCAT(oo.parent_id) pId,
+		oo.name,
+		oo.type,
+		oo.order_no,
+		(select
+		case when COUNT(*)>0 then 4 else 0 end warn
+		from t_channel c
+		inner join t_real_data tr on tr.id =c.id
+		inner JOIN t_org o on o.id = c.logic_org_id
+		left join t_device_detail dd on dd.id = c.dev_id
+		where (o.parent_ids like
+		CONCAT('%',oo.id,'%') or logic_org_id =oo.id)
+		and c.ch_type != 21 and (c.ch_type != 4 and c.type_id !=2) and (dd.online=  0 and c.ch_type in (124,162)  
+		and (tr.confirm_time is  null or tr.confirm_time &lt; tr.real_time)  )  or warn > 0) warn
+		from t_org oo
+		where
+		oo.parent_ids like
+		CONCAT('%',295854452555456325,'%') and oo.type = 6  ORDER BY order_no
+   </select>
+       
+    <update id="updateAlarmBychId">
+        update 
+        t_alarm_log 
+        set 
+        STATUS = 1 where ch_id = #{chId};
+        update t_real_data set warn  = 0  where id = #{chId};             
+    </update>   
+    
+     <select id="getAlarmLog" resultType="cn.cdsoft.common.persistence.MapEntity">
+        select * from (
+	    select
+		td.id devId,
+		IFNULL(tc.addr,o.name) addr,
+		0 status,
+		tc.id chId,
+		c.name devTypeName,
+		case when o.type = 7 then og.name else o.name end orgName,
+		a.real_time occurTime,
+		3 alarmValue,
+		1 count,
+		IFNULL(c.monad,'') monad,
+		case 
+		when dd.online = 0 and  td.dev_type in (156,173) then	CONCAT('/static_modules/channel/',c.offline_icon_skin)
+		when (a.real_value in (4,5,7,8) and  td.dev_type in (131,178)) then CONCAT('/static_modules/channel/',c.defence_icon_skin)
+        else CONCAT('/static_modules/channel/',c.warn_icon_skin) end  warnIconSkin
+		from
+		t_device td
+	     left join t_device_detail dd on dd.id = td.id
+		inner join t_channel tc on tc.dev_id = td.id
+		inner join  t_real_data a on a.id = tc.id 
+		left join  t_code c on c.id = tc.ch_type and tc.type_id = c.type_id
+		inner join t_org  o on o.id= tc.logic_org_id
+		inner join t_org og on og.id = o.parent_id
+		where
+		(o.parent_ids like CONCAT('%',#{orgId},'%')  or o.id = #{orgId}) and tc.ch_type !=21 	and (tc.ch_type != 4 and tc.type_id != 2)
+        and  ((dd.online = 0  and  td.dev_type in (156,173)  and (a.confirm_time is  null or a.confirm_time &lt; a.real_time))  or warn > 0)
+        
+        UNION ALL 
+        
+   	    select
+		td.id devId,
+		IFNULL(tc.addr,o.name) addr,
+		IFNULL(a.status,0) status,
+		tc.id chId,
+		c.name devTypeName,
+		case when o.type = 7 then og.name else o.name end orgName,
+		a.last_occur_time occurTime,
+		alarm_level alarmValue,
+		1 count,
+		IFNULL(c.monad,'') monad,
+		CONCAT('/static_modules/channel/',c.warn_icon_skin) warnIconSkin
+		
+		from
+		t_device td
+		inner join t_channel tc on tc.dev_id = td.id
+		inner join (SELECT * from t_alarm_log HAVING 1 order BY occur_time desc ) a on a.ch_id = tc.id 
+		left join  t_code c on c.id = tc.ch_type and tc.type_id = c.type_id
+		inner join t_org  o on o.id= tc.logic_org_id
+		inner join t_org og on og.id = o.parent_id
+		where
+		(o.parent_ids like CONCAT('%',#{orgId},'%')  or o.id = #{orgId}) and tc.ch_type !=21 and status >0) m ORDER BY occurTime desc
+        
+        </select>
+   
+</mapper>

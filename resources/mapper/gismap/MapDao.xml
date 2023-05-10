@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.gismap.dao.MapDao">
+
+    <insert id="generateRecord" >
+      insert into ptxy_map (org_id,code_path,create_by,create_date)
+      values(#{orgId},#{codePath},#{createBy},#{createDate})
+    </insert>
+
+        <update id="updateRecord">
+      update ptxy_map 
+      set
+        code_path = #{codePath},0
+        del_flag = 0,
+        update_by = #{updateBy},
+        update_date = #{updateDate}
+      where org_id = #{orgId}
+    </update>
+
+    <delete id="delete">
+      delete from ptxy_map where org_id = #{orgId}
+    </delete>
+
+    <select id="findList" resultType="com.alibaba.fastjson.JSONObject">
+      select id,name,file_name as fileName from ptxy_map
+    </select>
+
+    <select id="findProvinceList" resultType="com.alibaba.fastjson.JSONObject">
+      SELECT
+	  concat(a.id) as id,
+	  a.parent_id as parentId,
+	  a.name,
+	  a.code
+      from t_org a
+      where
+      a.type = 2
+      order by a.create_date desc
+    </select>
+    
+    <select id="findCityList" resultType="com.alibaba.fastjson.JSONObject">
+      SELECT 
+      concat(a.id) as orgId,
+	  a.name,
+	  a.code,
+	  a.type,
+	  a.parent_id as parentId,
+	  b.code_path as codePath
+	  FROM
+	  t_org a
+	  LEFT JOIN ptxy_map b ON a.id = b.org_id
+	  WHERE
+	  a.type = 3
+      ORDER BY
+	  a.create_date DESC
+    </select>
+
+    <select id="findCodeByOrgId" resultType="string">
+      select code from t_org where id = #{orgId}
+    </select>
+
+    <select id="checkHasMap" resultType="integer">
+      select count(org_id) from ptxy_map where org_id = #{orgId}
+    </select>
+
+    <delete id="deleteMapConfig">
+      delete from ptxy_map_config where org_id = #{orgId}
+    </delete>    
+    
+    <update id="updateMapConfig" parameterType="cn.cdsoft.modules.gismap.vo.MapConfigAddVO">
+      update ptxy_map_config 
+      set
+		config = #{configString},
+		update_by = #{updateBy},
+		update_date = #{updateDate}
+	  where id = #{id}
+    </update>
+    
+    <insert id="saveMapConfig">
+      insert into ptxy_map_config (id,org_id,line_id,x_line,y_line,sort)
+      values(#{id},#{orgId},#{lineId},#{xLine},#{yLine},#{sort})
+    </insert>    
+    
+        
+    <select id="showConfig" resultType="com.alibaba.fastjson.JSONObject">
+      select
+        concat(line_id) as lineId,
+        concat(id) as pointId,
+        x_line as xLine,
+        y_line as yLine,
+        sort
+      from ptxy_map_config
+      where org_id = #{orgId}
+      order by line_id,sort asc
+    </select>
+    
+</mapper>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.settings.dao.EMapConfigDao">
+
+	<sql id="tChannelColumns">
+		a.id AS "id",
+		a.dev_id AS "devId",
+		a.logic_org_id AS "logicOrgId",
+		a.ch_no AS "chNo",
+		a.ch_type AS "chType",
+		a.type_id AS "typeId",
+		a.addr AS "name",
+		a.coords_x AS "coordsX",
+		a.coords_y AS "coordsY",
+		a.not_use AS "notUse",
+		a.remarks AS "remarks",
+		a.del_flag AS "delFlag" ,
+		b.name AS "codeName",
+		b.icon_skin AS "iconSkin",
+		b.warn_icon_skin AS	"warnIconSkin"
+	</sql>
+
+	<sql id="tChannelJoins">
+		LEFT JOIN t_code b ON a.type_id = b.type_id and a.ch_type = b.id
+	</sql>
+
+	<select id="getChannelListByOrgId" resultType="java.util.HashMap">
+		SELECT
+		a.id AS "id",
+		a.dev_id AS "devId",
+		a.logic_org_id AS "logicOrgId",
+		a.ch_no AS "chNo",
+		a.ch_type AS "chType",
+		a.type_id AS "typeId",
+		case when a.ch_type = 162 then dd.bus_addr else  a.ext_params end "name",
+		a.coords_x AS "coordsX",
+		a.coords_y AS "coordsY",
+		a.not_use AS "notUse",
+		a.remarks AS "remarks",
+		a.del_flag AS "delFlag" ,
+		b.name AS "codeName",
+		b.icon_skin AS "iconSkin",
+		b.warn_icon_skin AS	"warnIconSkin"
+		FROM t_channel a
+		 left join t_device d on d.id = a.dev_id
+         left join t_device_detail dd on dd.id = d.id
+		LEFT JOIN t_code b ON a.type_id = b.type_id and a.ch_type = b.id
+		<where>
+			a.del_flag = 0 AND a.not_use = 0
+			<if test="orgId != null and orgId != ''">
+				AND a.logic_org_id = #{orgId}
+			</if>
+		</where>
+	</select>
+	
+	<select id="getDeviceListByOrgId" resultType="java.util.HashMap">
+		SELECT
+		a.id AS "id",
+		a.org_id AS "orgId",
+		a.parent_id as "parentId",
+		a.name,
+		a.coords_x AS "coordsX",
+		a.coords_y
+		AS "coordsY",
+		b.name AS "codeName",
+		b.icon_skin AS "iconSkin",
+		b.warn_icon_skin AS "warnIconSkin"
+		FROM t_device a
+		LEFT JOIN
+		t_code b ON a.type_id = b.type_id and a.dev_type = b.id
+		<where>
+			a.del_flag = 0	AND a.not_use = 0
+			<if test="orgId != null and orgId != ''">
+				AND a.org_id = #{orgId}
+			</if>
+		</where>
+	</select>
+	<!-- 设备字典 -->
+	<select id="eMapSelect" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT 
+		a.id as id ,
+		a.icon_skin as iconSkin,
+		a.name as name,
+		a.type_id as typeId
+		from t_code a
+		INNER JOIN t_device b on a.id = b.dev_type	and a.type_id = b.type_id 
+		where org_id=#{orgId}  and b.coords_x is null and b.coords_y is null
+		GROUP BY a.id ,a.type_id
+	</select>
+	<!-- 通道字典 -->
+	<select id="eMapChannelSelect" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT 
+		a.id as id,
+		a.icon_skin as iconSkin,
+		a.name as name,
+		a.type_id as typeId 
+		from t_code a 
+		INNER JOIN t_channel b on a.id = b.ch_type and a.type_id = b.type_id 
+		where b.logic_org_id = #{orgId}  and b.coords_x is null and b.coords_y is null
+		GROUP BY a.id,a.type_id
+	</select>
+
+</mapper>

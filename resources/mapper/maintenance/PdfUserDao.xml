@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.maintenance.dao.PdfUserDao">
+
+	<sql id="pdfUserColumns">
+		a.id AS "id",
+		a.name AS "name",
+		a.phone_one AS "phoneOne",
+		a.phone_two AS "phoneTwo",
+		a.depart_org_id AS "departOrgId",
+		a.position_id AS "positionId",
+		a.not_use AS "notUse",
+		a.del_flag AS "delFlag",
+		<!-- a.create_by AS "createBy.id", -->
+		<!-- a.create_date AS "createDate", -->
+		<!-- a.update_by AS "updateBy.id", -->
+		<!-- a.update_date AS "updateDate", -->
+		a.remarks AS "remarks"
+	</sql>
+	<sql id="pdfOrgColumns">
+		CONCAT(a.id) as id,
+		CONCAT(a.parent_id) AS parentId,
+		a.parent_ids AS parentIds,
+		a.code,
+		a.name,
+		a.order_no AS
+		orderNo,
+		a.type,
+		a.remarks,
+		a.del_flag as
+		delFlag,
+		a.image AS image
+	</sql>
+
+	<sql id="pdfUserJoins">
+	</sql>
+
+
+	<select id="get" resultType="PdfUser">
+		SELECT
+		<include refid="pdfUserColumns" />
+		FROM pdf_user a
+		WHERE a.id = #{id}
+	</select>
+	<!-- 电业局区域集合 -->
+	<select id="orgDepartList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT
+		<include refid="pdfOrgColumns" />
+		FROM t_org a
+		<where>
+			a.code like concat((SELECT code from t_org where id = #{orgId}),'%')
+			and a.del_flag = 0
+			and type &lt;=5
+			<if test="name !=null and name !=''">
+				and a.name like CONCAT('%',#{name},'%')
+			</if>
+			<if test="code !=null and code !=''">
+				and a.code like CONCAT(#{code},'%')
+			</if>
+		</where>
+		ORDER BY
+		a.code
+	</select>
+	<!-- 配点房集合 -->
+	<select id="orgList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT
+		<include refid="pdfOrgColumns" />
+		FROM t_org a
+		<where>
+			a.code like concat((SELECT code from t_org where id = #{orgId}),'%')
+			and
+			a.del_flag = 0 and type &lt;=5
+			<if test="name !=null and name !=''">
+				and a.name like CONCAT('%',#{name},'%')
+			</if>
+			<if test="code !=null and code !=''">
+				and a.code like CONCAT(#{code},'%')
+			</if>
+		</where>
+		ORDER BY
+		a.code
+	</select>
+	
+	<!-- 获取所有父级ID 拼接 -->
+	<select id="parentIds" resultType="java.lang.String">
+		SELECT CONCAT(parent_ids,id ) from t_org where id = #{orgId}
+	</select>
+	
+	<!-- 已经修改过的 -->
+	<select id="orgEditList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select
+		<include refid="pdfOrgColumns" />
+		from t_org a
+		<where>
+			a.del_flag = 0 and type &lt;=6 and type !=5
+			and a.id in (${orgIds})
+		</where>
+		ORDER BY
+		a.code
+	</select>
+
+	<!-- 配电房的父级的父级id -->
+	<select id="orgParentId" resultType="java.lang.String">
+		SELECT concat(parent_id) as parentId from t_org where id = #{parentId}
+	</select>
+
+
+	<!-- 职位集合 -->
+	<select id="posiList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT id,name from pdf_position where del_flag = 0
+	</select>
+	
+	<!-- 所属的设备通道类型 -->
+	<select id="tcodeList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT id,name,type_id as typeId from t_code
+		<where>
+			id in (2,4,5) and type_id =2
+			or id = 220 and type_id = 4
+			or id = 203 and type_id = 6
+			<if test="name != null and name != ''">
+				AND name LIKE concat('%',#{name},'%')
+			</if>
+		</where>
+	</select>
+
+	<!-- 物理删除职位 -->
+	<update id="deletePosition">
+		delete from pdf_position where id = #{id}
+	</update>
+
+	<!-- 添加职位 -->
+	<insert id="insertPosition" useGeneratedKeys="true" keyProperty="id"
+		parameterType="cn.cdsoft.common.persistence.MapEntity">
+		INSERT INTO pdf_position(name) values(#{name})
+	</insert>
+	
+	<!-- 辖区下的配电房 -->
+	<select id="elceList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT
+		<include refid="pdfOrgColumns" />
+		from t_org a
+		<where>
+			a.parent_ids LIKE
+			CONCAT('%', #{orgId}, '%') and a.type = 8
+			<if test="name != null and name != ''">
+				AND a.name LIKE concat('%',#{name},'%')
+			</if>
+		</where>
+	</select>
+
+	<!-- 保存用户配电房 -->
+	<insert id="saveUserOrg">
+		insert into pdf_user_org
+		(id,org_id,our_user_id,org_parent_id)
+		VALUES
+		(#{id},#{orgId},#{ourUserId},#{orgParentId})
+	</insert>
+	
+	<!-- 添加配电房下责任人 -->
+	<insert id="insertCodeOrg">
+		insert into
+		pdf_code_user_org(id,code_id,type_id,user_id,org_id,order_no,update_date)
+		values
+		(#{id},#{codeId},#{typeId},#{userId},#{OrgId},#{orderNo},#{updateDate})
+	</insert>
+
+	<!-- 删除用户下配电房 -->
+	<delete id="deleteUserOrg">
+		delete from pdf_user_org where our_user_id = #{userId}
+	</delete>
+	
+	<!-- 删除配电房责任人 -->
+	<delete id="deleteCodeOrg">
+		delete from pdf_code_user_org
+		<where>
+			user_id = #{userId}
+			<if test="time != null and time != ''">
+				and update_date &lt; DATE_SUB(#{time},interval 3 second)
+			</if>
+		</where>
+	</delete>
+
+	<!-- 获取最大责任人 -->
+	<select id="maxOrderNo" resultType="java.lang.String">
+		SELECT max(order_no) as orderNo
+		from pdf_code_user_org
+		where
+		code_id = #{codeId}
+		and type_id = #{typeId} and org_id = #{orgId}
+	</select>
+
+	<!-- 获取父级id和name -->
+	<select id="parentList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT parent_id as id ,name from t_org where id = #{orgId}
+	</select>
+	
+	<select id="details" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT concat(a.org_id ) as orgId,concat(b.org_parent_id) as orgParentId,c.name
+		as orgName,
+		d.name as codeName
+		from pdf_code_user_org a
+		INNER JOIN pdf_user_org b on a.user_id = b.our_user_id
+		and
+		a.org_id = b.org_id
+		INNER JOIN t_org c on c.id = a.org_id
+		INNER JOIN t_code d on a.type_id = d.type_id and a.code_id
+		= d.id
+		where a.user_id
+		=#{userId}
+	</select>
+	
+	<select id="parentId" resultType="java.lang.String">
+		select concat(parent_id) as parentId from t_org where id = (select parent_id
+		from t_org where id = #{orgId})
+	</select>
+
+	<!-- 用户集合 -->
+	<select id="findList" resultType="PdfUser">
+		SELECT
+		a.id as id,a.name as name,a.position_id AS positionId,b.name as positionName,a.phone_one as
+		phoneOne,a.phone_two as	phoneTwo,a.depart_org_id as departOrgId,
+		a.not_use as notUse,a.remarks as remarks
+		FROM
+		pdf_user a 	left JOIN pdf_position
+		b on a.position_id = b.id
+		<if test="orgId != null and orgId != ''">
+			left JOIN pdf_user_org c on a.id = c.our_user_id
+		</if>
+		<where>
+			a.del_flag = 0 and b.del_flag = 0
+			<if test="name != null and name != ''">
+				AND a.name LIKE concat('%',#{name},'%')
+			</if>
+			<if test="positionId != null and positionId != ''">
+				AND a.position_id = #{positionId}
+			</if>
+			<if test="phoneOne != null and phoneOne != ''">
+				AND a.phone_one LIKE concat('%',#{phoneOne},'%')
+				or a.phone_two LIKE concat('%',#{phoneOne},'%')
+			</if>
+			<if test="notUse != null and notUse != ''">
+				AND a.not_use = #{notUse}
+			</if>
+			<if test="departOrgId != null and departOrgId != ''">
+				and a.depart_org_id in (SELECT id from t_org where code like
+				concat((SELECT code from t_org where id = #{departOrgId}),'%') and type = 5)
+			</if>
+			<if test="codeId != null and codeId != ''">
+				and a.id in
+				(SELECT user_id from pdf_code_user_org where
+				code_id = #{codeId} and type_id = #{typeId}
+				GROUP
+				BY user_id)
+			</if>
+			<if test="orgId != null and orgId != ''">
+				AND c.org_id in (SELECT id from t_org where code like
+				concat((SELECT code from t_org where id = #{orgId}),'%') and type = 6)
+				GROUP BY c.our_user_id
+			</if>
+		</where>
+		ORDER BY a.create_date DESC
+	</select>
+
+	<update id="updateDate">
+		update pdf_code_user_org set update_date =#{newDate} where user_id = #{userId}
+		and org_id
+		= #{orgId}
+		and code_id = #{codeId} and type_id = #{typeId}
+	</update>
+
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id" parameterType="PdfUser">
+		INSERT INTO pdf_user(
+		id,
+		name,
+		phone_one,
+		phone_two,
+		depart_org_id,
+		position_id,
+		not_use,
+		del_flag,
+		create_by,
+		create_date,
+		update_by,
+		update_date,
+		remarks
+		)
+		VALUES (
+		#{id},
+		#{name},
+		#{phoneOne},
+		#{phoneTwo},
+		295854452555456325,
+		#{positionId},
+		#{notUse},
+		#{delFlag},
+		#{createBy.id},
+		#{createDate},
+		#{updateBy.id},
+		#{updateDate},
+		#{remarks}
+		)
+	</insert>
+
+	<update id="update">
+		UPDATE pdf_user SET
+		name = #{name},
+		phone_one = #{phoneOne},
+		phone_two = #{phoneTwo},
+		depart_org_id =
+		#{departOrgId},
+		position_id = #{positionId},
+		not_use = #{notUse},
+		update_by = #{updateBy.id},
+		update_date =
+		#{updateDate},
+		remarks = #{remarks}
+		WHERE id = #{id}
+	</update>
+
+	<!-- 查询是否第一责任人 -->
+	<select id="selectCodeOrgList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT
+		id,
+		code_id as codeId,
+		type_id as typeId,
+		org_id as orgId,
+		order_no as orderNo
+		from pdf_code_user_org where user_id = #{userId}
+	</select>
+
+
+	<!-- 第二大的 -->
+	<select id="secondOrder" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select min(order_no) as orderNo,concat(id) as id from pdf_code_user_org
+		where order_no !=1
+		and org_id = #{orgId} and code_id =#{codeId}
+		and type_id =#{typeId}
+	</select>
+
+	<update id="updateOrder">
+		update pdf_code_user_org set order_no =1 where id = #{id}
+	</update>
+
+
+	<!-- <update id="delete"> -->
+	<!-- DELETE FROM pdf_user -->
+	<!-- WHERE id = #{id} -->
+	<!-- </update> -->
+
+	<!--逻辑删除 -->
+	<update id="delete">
+		UPDATE pdf_user SET
+		del_flag = 1
+		WHERE id = #{id}
+	</update>
+
+
+	<!-- 根据实体名称和字段名称和字段值获取唯一记录 -->
+	<select id="findUniqueByProperty" resultType="PdfUser" statementType="STATEMENT">
+		select * FROM pdf_user where
+		${propertyName} = '${value}'
+	</select>
+
+</mapper>

@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cdsoft.modules.homepage.dao.AlarmLogDao">
+
+	<select id="getAllAlarm" parameterType="String" resultType="map">
+		SELECT
+		tal.id,
+		tc.id chId,
+		concat(tc.logic_org_id) orgId,
+		tcode.name devTypeName,
+		tc.name devName,
+		CONCAT(tcode.name," 报警")
+		alarmType,
+		tal.alarm_level alarmLevel,
+		tc.ch_no
+		chNo,
+		DATE_FORMAT(tal.occur_time,'%Y-%m-%d %H:%i:%s') alarmTime,
+		case when
+		td.dev_type = 173 then CONCAT((select name from t_org where id = torg.parent_id),'(',td.addr,')') else
+		concat(td.addr,'(',tc.addr,')') end orgName
+		FROM t_alarm_log tal
+		INNER JOIN t_channel tc
+		ON tal.ch_id = tc.id
+		INNER JOIN
+		t_device td
+		ON tc.dev_id = td.id
+		INNER JOIN t_code tcode
+		ON tc.ch_type = tcode.id
+		AND tc.type_id = tcode.type_id
+		INNER JOIN
+		t_org torg
+		ON tc.logic_org_id = torg.id
+		WHERE
+		tc.ch_type !=21 and
+		DATE_SUB(CURDATE(), INTERVAL 3 MONTH) &lt;=
+		tal.occur_time
+		<if test="state == 0">
+			AND tal.status is null
+		</if>
+		<if test="state == 1">
+			AND tal.status is not null
+		</if>
+		ORDER BY tal.occur_time DESC
+	</select>
+
+
+	<select id="getAllAlarm1" parameterType="String" resultType="map">
+		select CONCAT((@i:=@i+1),'_',id) id,chId,orgId, devTypeName,devName,alarmType,chNo,alarmTime,orgName from (
+		SELECT
+		tc.id id,
+		tc.id chId,
+		concat(tc.logic_org_id) orgId,
+		tcode.name devTypeName,
+		tc.name devName,
+		CONCAT(tcode.name," 报警")
+		alarmType,
+		tal.alarm_level alarmLevel,
+		tc.ch_no chNo,
+		DATE_FORMAT(tal.occur_time,'%Y-%m-%d %H:%i:%s') alarmTime,
+		(
+		SELECT
+		too.name
+		FROM t_org too
+		WHERE too.code = SUBSTR(torg.code,1,12)
+		) orgName
+		FROM t_alarm_log tal
+		INNER JOIN t_channel tc
+		ON
+		tal.ch_id = tc.id
+		INNER JOIN t_device td
+		ON tc.dev_id = td.id
+		INNER JOIN t_code tcode
+		ON tc.ch_type = tcode.id
+		AND
+		tc.type_id = tcode.type_id
+		INNER JOIN t_org torg
+		ON tc.logic_org_id = torg.id
+		WHERE
+		tc.ch_type !=21 and
+		DATE_SUB(CURDATE(), INTERVAL 3 MONTH) &lt;= tal.occur_time
+		<if test="state == 0">
+			AND tal.status is null
+		</if>
+		<if test="state == 1">
+			AND tal.status is not null
+		</if>
+
+		UNION all
+
+		SELECT
+		tc.id id,
+		tc.id chId,
+		concat(tc.logic_org_id) orgId,
+		tcode.name devTypeName,
+		tc.name devName,
+		CONCAT(tcode.name," 故障") alarmType,
+		1 alarmLevel,
+		tc.ch_no chNo,
+		DATE_FORMAT(tal.real_time,'%Y-%m-%d %H:%i:%s')
+		alarmTime,
+		(
+		SELECT too.name
+		FROM t_org too
+		WHERE too.code = SUBSTR(torg.code,1,12)
+		) orgName
+		FROM t_real_data tal
+		INNER JOIN
+		t_channel tc
+		ON tal.id = tc.id
+		INNER JOIN t_device td
+		ON tc.dev_id = td.id
+		INNER JOIN t_code tcode
+		ON tc.ch_type = tcode.id
+		AND tc.type_id = tcode.type_id
+		INNER JOIN t_org torg
+		ON tc.logic_org_id = torg.id
+		where
+		<if test="state == 1">
+			tal.warn &lt; 0 AND
+		</if>
+		((dev_type in (156,173) and tal.real_time &lt;= DATE_SUB(NOW(),INTERVAL 2 DAY))) ) m,(select @i:=100) t ORDER BY
+		alarmTime desc,id
+	</select>
+
+	<select id="getAllAlarm999" resultType="map">
+		select CONCAT((@i:=@i+1),'_',id) id,realValue,chId,orgId,alarmLevel, devTypeName,devName,
+		alarmType,chNo,alarmTime,orgName, addr,type ,count
+		from (
+		SELECT tal.real_value realValue,concat(tc.addr,'') addr,
+		(select count(*) count from (
+		select DATE_FORMAT(occur_time,'%y-%m-%d %H:%i:%s') occurTime,ch_id from
+		t_alarm_log
+		UNION
+		select DATE_FORMAT(real_time,'%y-%m-%d %H:%i:%s') occurTime ,id ch_id from t_real_data
+		) m where m.ch_id =tc.id) count,
+
+		tc.id id,
+		tc.id chId,
+		concat(tc.logic_org_id) orgId,
+		case when td.dev_type in (131,178) then tcode.name else
+		tdcode.name
+		end devTypeName,
+		tc.name devName,
+
+		case when dev_type in (131,178) and tal.real_value in (4) then CONCAT("设备故障")
+		when
+		dev_type in (131,178) and tal.real_value in (5) then CONCAT("设备屏蔽")
+		when dev_type in (131,178) and tal.real_value in
+		(7) then CONCAT("设备反馈")
+		when dev_type in (131,178) and tal.real_value in (8) then CONCAT("设备动作")
+		when dev_type in
+		(156,173,1004,1019) and dd.online = 0 then CONCAT("设备离线")
+		when
+		dev_type in (1004) and tal.real_value in (2) then CONCAT("低电量报警")		
+		else CONCAT("设备报警") end alarmType,
+
+		case when tal.real_value in (4,5)
+		then 1
+		when dev_type in (156,173) and dd.online = 0 then 1
+		else 0 end type,
+		'1' alarmLevel,
+		case when dev_type in
+		(156,173) then dd.bus_addr else
+		tc.ch_no end chNo,
+		DATE_FORMAT(tal.real_time,'%Y-%m-%d %H:%i:%s') alarmTime,
+		case when
+		td.dev_type = 173 then CONCAT((select name from t_org where id = torg.parent_id),'(',td.addr,')') else
+
+		concat(td.addr,'(',tc.addr,')') end orgName
+
+		FROM 
+		t_real_data tal 
+		INNER JOIN t_channel tc ON tal.id = tc.id
+		INNER JOIN	t_device td
+		ON tc.dev_id = td.id
+		left join
+		t_device_detail dd on dd.id= td.id
+		left JOIN t_code tcode
+		ON tc.ch_type =
+		tcode.id
+		AND tc.type_id = tcode.type_id
+		left
+		JOIN t_code tdcode
+		ON td.dev_type = tdcode.id
+		AND td.type_id = tdcode.type_id
+		INNER JOIN t_org torg
+		ON tc.logic_org_id =
+		torg.id
+		where
+		(tal.warn &gt;0 or
+		((dev_type in (156,173,1004,1019) and (dd.online = 0 or tal.real_value = 2) and (tal.confirm_time is  null or tal.confirm_time &lt; tal.real_time) ) ))
+		and (tc.ch_type != 4 and tc.type_id != 2)
+		<if test="alarmTypeFilter == 1">
+			and dev_type in (156,173)
+		</if>
+		<if test="alarmTypeFilter == 2">
+			and dev_type in (169)
+		</if>
+		<if test="alarmTypeFilter == 3">
+			and dev_type not in (169,156,173)
+		</if>
+		) m,(select @i:=100) t ORDER
+		BY alarmTime desc,id
+	</select>
+
+
+	<select id="getAllAlarm1000" resultType="map">
+		select CONCAT((@i:=@i+1),'_',id) id,realValue,chId,orgId,alarmLevel,
+		devTypeName,devName,alarmType,chNo,alarmTime,orgName, addr,type,count from (
+		select tal.alarm_value
+		realValue,IFNULL(tc.addr,'') addr,count+1 count,
+		tc.id id,
+		tc.id chId,
+		concat(tc.logic_org_id) orgId,
+		case when
+		td.dev_type in (131,178) then tcode.name else
+		tdcode.name end devTypeName,
+		tc.name devName,
+		
+		case when td.dev_type in
+		(131,178) and tal.alarm_value in (4) then CONCAT('设备故障')
+		when td.dev_type in (131,178) and
+		tal.alarm_value in (5) then
+		CONCAT('设备屏蔽')
+		when td.dev_type in (131,178) and tal.alarm_value in (7) then CONCAT('设备反馈')
+		when td.dev_type in
+		(131,178) and tal.alarm_value in (8) then CONCAT('设备动作')
+		when dev_type in (156,173,1019)  and  tal.status = 7  then CONCAT('设备离线')  else CONCAT('设备报警') end
+		alarmType,
+
+		case when td.dev_type in (131,178)
+		and tal.alarm_value in (4,5,7,8) then 0
+		when dev_type in (156,173) and
+		dd.online = 0 then 0
+		else 1 end type,
+		'1'	alarmLevel,
+		case when dev_type in (156,173) then dd.bus_addr else
+		tc.ch_no end
+		chNo,
+		DATE_FORMAT(tal.occur_time,'%Y-%m-%d %H:%i:%s') alarmTime,
+		case when td.dev_type = 173 then CONCAT((select name
+		from t_org where id = 
+		torg.parent_id),'(',td.addr,')') else
+
+		concat(td.addr,'(',tc.addr,')') end orgName
+		from (select *,count(*) count from
+		(select *from t_alarm_log HAVING 1 ORDER BY
+		occur_time desc) m group by	ch_id) tal
+				
+
+		INNER JOIN t_channel tc
+		ON tal.ch_id = tc.id
+		INNER JOIN
+		t_device td
+		ON tc.dev_id = td.id
+		left join
+		t_device_detail dd on dd.id= td.id
+
+		left JOIN t_code tcode
+		ON tc.ch_type = tcode.id
+		AND tc.type_id = tcode.type_id
+		left
+		JOIN t_code tdcode
+		ON td.dev_type =
+		tdcode.id
+		AND td.type_id = tdcode.type_id
+		INNER JOIN t_org torg
+		ON tc.logic_org_id =
+		torg.id
+		where 
+		tc.ch_type != 21 and (tc.ch_type != 4 and tc.type_id != 2)
+		<if test="alarmTypeFilter == 1">
+			and td.dev_type in (156,173)
+		</if>
+		<if test="alarmTypeFilter == 2">
+			and td.dev_type in (169)
+		</if>
+		<if test="alarmTypeFilter == 3">
+			and td.dev_type not in (169,156,173)
+		</if>
+ 
+		) j,(select @i:=100) t order by j.alarmTime desc 
+	</select>
+
+
+	<select id="getAlarmTime" resultType="map">
+		select * from (
+		select DATE_FORMAT(occur_time,'%y-%m-%d %H:%i:%s') occurTime
+		from
+		t_alarm_log where ch_id =#{chId}
+		UNION
+		select DATE_FORMAT(real_time,'%y-%m-%d %H:%i:%s') occurTime from t_real_data
+		r where id = #{chId}
+		) m
+		ORDER BY occurTime desc
+	</select>
+
+	<update id="confirmAlarmIds">
+		update t_alarm_log tal
+		set tal.status = 3
+		WHERE tal.ch_id in (${ids});
+
+		update t_real_data set warn = 0,confirm_time = NOW()
+		where id in (${ids});
+	</update>
+
+	<select id="getAlarmByIds" parameterType="String" resultType="map">
+		SELECT
+		concat(id) id,
+		concat(dev_id) devId
+		FROM
+		t_channel
+		WHERE id in (${ids})
+	</select>
+
+	<select id="getAlarmByChids" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select c.id,r.real_value realValue,r.real_time realTime,r.warn from t_channel c
+		inner join t_real_data r on r.id = c.id
+		inner join t_device_detail dd on dd.id = c.dev_id
+		where c.id in (${chIds}) and ((ch_type = 1 and type_id = 9) or (ch_type in (162,124) and dd.online = 0))		
+	</select>
+
+
+	<update id="insertAlarmLog">
+		insert into t_alarm_log(id,ch_id,alarm_level,occur_time,status,alarm_value)
+		values(null,#{chId},#{alarmLevel},#{alarmTime},7,#{alarmValue});
+	</update>
+
+
+</mapper>

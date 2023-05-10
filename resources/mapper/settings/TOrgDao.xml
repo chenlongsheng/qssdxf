@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.settings.dao.TOrgDao">
+    <sql id="columns">
+        a.id,
+        a.parent_id AS parentId,
+        a.name,
+        a.parent_ids AS parentIds,
+        a.order_no AS orderNo,
+        a.code,
+        a.type,
+        a.coords_y AS coordsY,
+        a.coords_x AS coordsX,
+        a.image
+    </sql>
+    <select id="get" resultType="TOrg">
+        SELECT
+        <include refid="columns"/>
+        FROM t_org a
+        WHERE a.id = #{id}
+    </select>
+
+    <select id="findListByParentId" resultType="TOrg">
+        SELECT
+        <include refid="columns"/>
+        FROM t_org a
+        WHERE a.parent_id = #{parentId}
+    </select>
+
+    <select id="selectAllHouse" resultType="TOrg">
+        SELECT
+        <include refid="columns"/>,b.name as childrenOrgName
+        FROM t_org a INNER JOIN t_org b ON a.id = b.parent_id
+        WHERE a.type = "5"
+    </select>
+
+    <select id="getAllCityByCode" resultType="TOrg">
+        SELECT
+        <include refid="columns"/>
+        FROM t_org a
+        WHERE a.code like concat(#{code},'%')
+        order by code+0
+    </select>
+
+    <select id="getOrgByCode" resultType="TOrg">
+        SELECT
+        <include refid="columns"/>
+        FROM t_org a
+        WHERE a.code = #{code}
+    </select>
+
+</mapper>

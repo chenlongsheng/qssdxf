@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.settings.dao.TOrgExecUnitBindDao">
+    
+	<sql id="tOrgExecUnitBindColumns">
+		CONCAT(a.id) AS "id",
+		CONCAT(a.org_id) AS "orgId",
+		CONCAT(a.exec_unit_id) AS "execUnitId",
+	</sql>
+	
+	<sql id="tOrgExecUnitBindJoins">
+	</sql>
+	
+	<select id="carParkList" resultType="CpCarpark">
+	 select * from cp_car_park
+	</select>
+	
+	<select id="cdzChargePotList" resultType="cn.cdsoft.modules.settings.entity.CdzChargePot">
+	 select id, admin_user_id as userId,name from cdz_charge_pot
+	</select>
+	
+    
+	<select id="get" resultType="TOrgExecUnitBind" >
+		SELECT CONCAT(a.id) as id,CONCAT(a.org_id) as orgId,b.name as orgName,a.exec_unit_id as execUnitId,
+		e.name as execUnitName
+		FROM
+            t_org_exec_unit_bind a
+            inner join t_org b on a.org_id = b.id
+            inner join
+            (select c.id,c.name from cp_car_park c 
+            union 
+            select d.id,d.name from cdz_charge_pot d ) e ON a.exec_unit_id = e.id
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="getTorg" resultType="TOrgExecUnitBind" >
+         SELECT b.id,a.id as orgId,a.name as orgName,b.exec_unit_id as execUnitId,e.name as execUnitName
+		FROM  (select * from t_org where type = 5)  a  
+		LEFT JOIN 
+        t_org_exec_unit_bind  b on b.org_id = a.id
+         left join
+        (select c.id,c.name from cp_car_park c 
+         union 
+         select d.id,d.name from cdz_charge_pot d ) e ON b.exec_unit_id = e.id
+		<where>
+		<if test="orgId != null and orgId != ''">
+				AND a.id = #{orgId}
+		</if>
+		</where>
+	</select>
+	
+	<select id="findBindList" resultType="cn.cdsoft.common.persistence.MapEntity" >
+		SELECT concat(a.id) as id,concat(a.org_id) as orgId,b.name as orgName,a.exec_unit_id as execUnitId,
+		e.name as execUnitName
+		FROM
+            t_org_exec_unit_bind a
+            inner join t_org b on a.org_id = b.id
+            inner join
+            (select c.id,c.name from cp_car_park c 
+            union 
+            select d.id,d.name from cdz_charge_pot d ) e ON a.exec_unit_id = e.id
+		<where>
+			<if test="id != null and id != ''">
+				AND a.id = #{id}
+			</if>
+			<if test="orgName != null and orgName != ''">
+				AND b.name like concat('%',#{orgName},'%')
+			</if>
+			<if test="execUnitId != null and execUnitId != ''">
+				AND a.exec_unit_id like concat('%',#{execUnitId},'%')
+			</if>
+			<if test="execUnitName != null and execUnitName != ''">
+				AND e.name like concat('%',#{execUnitName},'%') 
+			</if>
+		</where>
+		ORDER BY a.id desc
+	</select>
+	
+
+	<select id="findList" resultType="TOrgExecUnitBind" >
+	    SELECT CONCAT(b.id) as id,CONCAT(a.id) as orgId,a.name as orgName,b.exec_unit_id as execUnitId
+		FROM  (select * from t_org where type = 5)  a  
+		LEFT JOIN 
+        t_org_exec_unit_bind  b on b.org_id = a.id
+        <where>
+        <if test="orgName != null and orgName != ''">
+        AND a.name like concat('%',#{orgName},'%')
+        </if>
+        <if test="execUnitId!='' and execUnitId==0">
+        AND b.exec_unit_id is not null
+        </if>
+        <if test="execUnitId!='' and execUnitId==1">
+        AND b.exec_unit_id is null
+        </if>
+        </where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	
+	<select id="findAllList" resultType="TOrgExecUnitBind" >
+		SELECT 
+			<include refid="tOrgExecUnitBindColumns"/>
+		FROM t_org_exec_unit_bind a
+		<include refid="tOrgExecUnitBindJoins"/>
+		<where>
+			
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAreaList" resultType="Area">
+	select 	
+	    a.id,
+		a.parent_id AS "parent.id",
+		a.parent_ids,
+		a.code,
+		a.name,
+		a.order_no AS "orderNo",
+		a.type,
+		a.remarks,
+		a.create_by AS "createBy.id",
+		a.create_date,
+		a.update_by AS "updateBy.id",
+		a.update_date,
+		a.del_flag
+    from t_org a
+    where a.type &lt;= 5  AND  a.id not in (select b.org_id  from t_org_exec_unit_bind b)
+   
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO t_org_exec_unit_bind(
+			id,
+			org_id,
+			exec_unit_id
+		) VALUES (
+			#{id},
+			#{orgId},
+			#{execUnitId}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE t_org_exec_unit_bind SET 	
+			org_id = #{orgId},
+			exec_unit_id = #{execUnitId}
+		WHERE id = #{id}
+	</update>
+	
+	
+	<!--物理删除-->
+	<update id="delete">
+		DELETE FROM t_org_exec_unit_bind
+		WHERE id = #{id}
+	</update>
+	
+	<!--逻辑删除-->
+	<update id="deleteByLogic">
+		UPDATE t_org_exec_unit_bind SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+	
+	<!-- 根据实体名称和字段名称和字段值获取唯一记录 -->
+	<select id="findUniqueByProperty" resultType="TOrgExecUnitBind" statementType="STATEMENT">
+		select * FROM t_org_exec_unit_bind  where ${propertyName} = '${value}'
+	</select>
+	
+</mapper>

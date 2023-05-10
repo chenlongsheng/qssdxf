@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cdsoft.modules.homepage.dao.DataViewDao">
+
+
+	<select id="getWaterDevByBuild" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+		SELECT
+		concat(a.id) id,
+		concat(a.addr,a.name) name
+		from (
+		SELECT * from t_device where dev_type in (156,173)) a
+		left join t_org b on a.org_id=b.id
+		where a.org_id = #{orgId} or b.parent_id=#{orgId}
+		order by b.order_no desc
+	</select>
+
+	<select id="getHourDataByDev" parameterType="cn.cdsoft.modules.homepage.vo.HourDataFindVO"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select
+		ch_id,
+		round(avg(history_value),2)  historyValue,
+		HOUR(history_time) as historyTime
+		from
+		(select *from t_history_data_final
+		where ch_id in
+		(select id from t_channel where dev_id=#{devId})
+		and history_time BETWEEN DATE_FORMAT(#{startDate},'%Y/%m/%d')  and DATE_FORMAT(#{startDate},'%Y/%m/%d 23:59:59')
+		ORDER BY history_time desc
+		)a GROUP BY DATE_FORMAT(history_time,'%Y/%m/%d'),ch_id,HOUR(history_time)
+	</select>
+
+	<select id="getHourDataByDev1" parameterType="cn.cdsoft.modules.homepage.vo.HourDataFindVO"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select h.id,ch_id chId,history_value historyValue,DATE_FORMAT(history_time,'%Y/%m/%d %H') historyTime 
+		from
+		(select * from	t_history_data_final ORDER BY history_time desc) h
+		inner join t_channel c on c.id = h.ch_id
+		where 
+		c.id =#{chId} and history_time >'2019-04-14'
+		GROUP BY HOUR(history_time) order by history_time
+	</select>
+
+	<select id="getAvgData" parameterType="cn.cdsoft.modules.homepage.vo.HourDataFindVO"
+		resultType="com.alibaba.fastjson.JSONObject">
+		select avg(history_value) historyValue,
+		DATE_FORMAT(history_time,'%Y/%m/%d') historyTime
+		from t_history_data_final where ch_id in (select id from t_channel where dev_id=#{devId})		
+	    and history_time BETWEEN DATE_FORMAT(#{startDate},'%Y/%m/%d')  and DATE_FORMAT(#{endDate},'%Y/%m/%d')
+		group by DATE_FORMAT(history_time,'%Y/%m/%d')
+	</select>
+	
+	<select id="getAllWater" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select
+		d.id devId,
+		concat(d.addr,d.name) devName,
+		c.id chId,
+		d.dev_type devType,		
+		concat(o.parent_id) orgId,
+		o.name floorName,
+		oo.name orgName,
+		IFNULL(FORMAT((r.real_value-param2)/c.param1,c.param0),0) realValue,		
+		co.monad,
+		case when   dd.online = 0  then -1 else IFNULL(r.warn,0) end warn			
+		from t_device d left join t_device_detail dd on dd.id = d.id
+	
+		LEFT JOIN t_org o on o.id = d.org_id
+		left join t_org oo on oo.id =o.parent_id
+		inner JOIN t_channel c on c.dev_id = d.id
+		left join t_code co on co.id = c.ch_type and c.type_id = co.type_id
+		left join t_real_data r on r.id = c.id
+		where d.dev_type in (156,173) ORDER BY oo.id,o.order_no					
+	</select>
+	
+	
+	<delete id="deleteHistoryData">
+		delete from 
+		t_history_data_final
+		where
+		history_time &lt;= DATE_SUB(NOW(),INTERVAL 30 Day);
+		
+		delete from t_alarm_log where  status>0 and occur_time &lt;= DATE_SUB(NOW(),INTERVAL 60 Day);		
+    </delete>
+	
+</mapper>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cdsoft.modules.warm.dao.PdfBindDao">
+
+    <insert id="addBind" parameterType="cn.cdsoft.modules.warm.entity.PdfBind">
+        insert into pdf_bind
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="openId != null and openId != ''">
+                open_id,
+            </if>
+            <if test="userId != null and userId != ''">
+                user_id,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="openId != null and openId != ''">
+                #{openId},
+            </if>
+            <if test="userId != null and userId != ''">
+                #{userId},
+            </if>
+        </trim>
+    </insert>
+
+    <update id="updateBind" parameterType="cn.cdsoft.modules.warm.entity.PdfBind">
+        UPDATE pdf_bind
+        <set>
+            <if test="openId != null and openId != ''">
+                open_id = #{openId},
+            </if>
+            <if test="userId != null and userId != ''">
+                user_id = #{userId},
+            </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="findBind" parameterType="cn.cdsoft.modules.warm.entity.PdfBind" resultType="cn.cdsoft.modules.warm.entity.PdfBind">
+        select * from pdf_bind
+        <where>
+            <if test="id != null and id != ''">
+                and id = #{id}
+            </if>
+            <if test="openId != null and openId != ''">
+                and open_id = #{openId}
+            </if>
+            <if test="userId != null and userId != ''">
+                and user_id = #{userId}
+            </if>
+        </where>
+    </select>
+
+    <resultMap id="projectMap" type="map">
+        <id property="id" column="id" javaType="String" />
+        <id property="orgId" column="orgId" javaType="String" />
+    </resultMap>
+
+    <select id="getUserProject" resultMap="projectMap">
+        select a.id,a.name,b.id orgId,b.name orgName from sys_user a left join t_org b on a.org_id = b.id where a.id in
+        <foreach collection="array" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="findBindByIds" resultType="cn.cdsoft.modules.warm.entity.PdfBind">
+        select open_id openId,user_id userId from pdf_bind where user_id in
+        <foreach collection="array" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+</mapper>

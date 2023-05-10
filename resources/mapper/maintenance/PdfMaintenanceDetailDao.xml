@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.maintenance.dao.PdfMaintenanceDetailDao">
+
+	<insert id="insert">
+		INSERT INTO pdf_maintenance_detail(
+		id,
+		maintenance_id,
+		org_parent_id,
+		type_id,
+		time_start,
+		time_stop,
+		contacts,
+		phone,
+		telephone
+		) VALUES (
+		#{id},
+		#{maintenanceId},
+		#{orgParentId},
+		#{typeId},
+		#{timeStart},
+		#{timeStop},
+		#{contacts},
+		#{phone},
+		#{telephone}
+		)
+	</insert>
+
+
+	<insert id="saveMaintenanceCode">
+		INSERT INTO pdf_maintenance_code(
+		id,
+		maintenance_id,
+		main_detail_id,
+		org_parent_id,
+		org_id,
+		code_id,
+		type_id,
+		order_no,
+		update_date
+		)values(
+		#{id},
+		#{maintenanceId},
+		#{mainDetailId},
+		#{orgParentId},
+		#{orgId},
+		#{codeId},
+		#{typeId},
+		#{orderNo},
+		#{updateDate}
+		)
+	</insert>
+
+	<!-- 获取最大排序 -->
+	<select id="maxOrderNo" resultType="java.lang.String">
+		SELECT max(order_no) as orderNo
+		from pdf_maintenance_code
+		<where>
+			code_id =
+			#{codeId}
+			and type_id = #{typeId} and org_parent_id = #{orgParentId}
+			<if test="maintenanceId !=null and maintenanceId != ''">
+				and maintenance_id= #{maintenanceId}
+			</if>
+		</where>
+	</select>
+
+
+	<update id="updateMainDate">
+		update pdf_maintenance_code set update_date =#{newDate},main_detail_id = #{mainDetailId}
+		where
+		main_detail_id = #{oldMainDetailId}
+		and
+		org_id = #{orgId}
+		and code_id = #{codeId} and type_id = #{typeId}
+	</update>
+
+	<update id="updateMaintainDate">
+		update pdf_maintenance_code set update_date =#{newDate}
+		where main_detail_id = #{mainDetailId}
+		and
+		org_parent_id = #{orgParentId}
+		and code_id = #{codeId} and type_id = #{typeId}
+	</update>
+
+
+	<delete id="delByMaintId">
+		DELETE FROM pdf_maintenance_detail
+		WHERE maintenance_id = #{maintenanceId}
+	</delete>
+
+	<select id="selectDetail" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT * from pdf_maintenance_detail where id =#{id}
+	</select>
+	<!-- 查询管辖下所有配电房 -->
+	<select id="selectOrgIds" resultType="java.lang.String">
+		SELECT id from t_org where parent_ids like
+		concat('%',#{orgParentId},'%')
+		and type =8
+	</select>
+
+	<delete id="deleteDetail">
+		delete from pdf_maintenance_code
+		<where>
+			maintenance_id = #{mainDatailId}
+			<if test="time != null and time != ''">
+				and update_date &lt; DATE_SUB(#{time},interval 3 second)
+			</if>
+		</where>
+	</delete>
+	<!-- 查询公司明细 -->
+	<select id="selectMaintenanceDetail" resultType="cn.cdsoft.modules.maintenance.entity.PdfMaintenanceDetail">
+		SELECT id,maintenance_id as maintenanceId,org_parent_id as
+		orgParentId,
+		time_start as timeStart,time_stop as timeStop,contacts,phone,telephone
+		from pdf_maintenance_detail where
+		maintenance_id = #{mainDatailId}
+	</select>
+	<!-- 管辖区域下所有类型 -->
+	<select id="codeMainList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT a.code_id as codeId, a.type_id as typeId,b.name from pdf_maintenance_code a INNER JOIN t_code2 b on a.code_id
+		= b.id and a.type_id =
+		b.type_id
+		where a.main_detail_id = #{mainDetailId}
+		GROUP BY a.code_id ,a.type_id
+	</select>
+	<!-- 维保人员的维保类型 -->
+	<select id="selectCodeList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select concat(a.org_parent_id) as orgParentId ,concat(b.org_id) as
+		orgId,c.name as codeName,d.name as orgName
+		from pdf_maintenance_detail a INNER JOIN pdf_maintenance_code b on a.id =
+		b.main_detail_id
+		inner join t_code2 c on b.code_id = c.id and c.type_id = b.type_id
+		INNER JOIN t_org d on b.org_id = d.id
+		where b.main_detail_id = #{mainDatailId}
+	</select>
+<!-- 	where a.contacts = #{mainDatailId}  需要修改的上一句,mainDatailId 是上一句-->
+	
+	
+	<!--  没有用!!!   修改中获取维保详情 -->
+	<select id="getMainDetailList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT
+		b.id as mainDetailId,b.org_parent_id as orgParentId,c.code_id as codeId,c.type_id as typeId,
+		b.time_start as timeStart,b.time_stop as timeStop,b.contacts as contacts,b.phone as phone,
+		b.telephone as telephone
+		from pdf_maintenance a INNER JOIn pdf_maintenance_detail b on a.id =b.maintenance_id
+		INNER JOIN pdf_maintenance_code c on b.id=c.main_detail_id
+		where a.id = #{id}
+	</select>
+</mapper>

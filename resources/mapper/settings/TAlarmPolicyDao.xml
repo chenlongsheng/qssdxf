@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.settings.dao.TAlarmPolicyDao">
+
+	<sql id="tAlarmPolicyColumns">
+		a.id AS "id",
+		a.ch_id AS "chId",
+		a.type_id AS "typeId",
+		a.ch_type AS "chType",
+		a.org_id AS "orgId",
+		a.level AS
+		"level",
+		a.low_value AS "lowValue",
+		a.high_value AS "highValue"
+	</sql>
+
+	<sql id="tAlarmPolicyJoins">
+	</sql>
+
+
+
+	<select id="get" resultType="TAlarmPolicy">
+		SELECT
+		<include refid="tAlarmPolicyColumns" />
+		,
+		b.name as chName, c.name as orgName,d.name as codeName,e.type_name as typeName
+		FROM t_alarm_policy a LEFT JOIN
+		t_channel b on a.ch_id = b.id
+		LEFT JOIN t_org c on a.org_id = c.id
+		LEFT JOIN t_code d on a.ch_type = d.id and a.type_id
+		= d.type_id
+		LEFT JOIN t_code_type e on a.type_id = e.id
+		WHERE a.id = #{id}
+	</select>
+
+	<select id="findList" resultType="TAlarmPolicy">
+		SELECT
+		<include refid="tAlarmPolicyColumns" />
+		,
+			cc.name as chName, c.name as orgName,d.name as codeName,e.type_name as typeName
+		FROM t_alarm_policy a LEFT JOIN
+		t_channel b on a.ch_type = b.ch_type and a.type_id = b.type_id
+	    left join t_device dd on dd.id = b.dev_id
+	    left join t_code cc on cc.id = dd.dev_type and cc.type_id = dd.type_id
+    	
+		LEFT JOIN t_org c on a.org_id = c.id
+		LEFT JOIN t_code d on a.ch_type = d.id and a.type_id = d.type_id
+		LEFT JOIN t_code_type e on a.type_id = e.id
+		<where>
+		a.type_id =3
+			<if test="chName != null and chName != ''">
+				AND b.name like concat('%',#{chName},'%')
+			</if>
+			<if test="chType != null and chType != ''">
+				AND a.ch_type = #{chType}
+			</if>
+<!-- 			<if test="orgId != null and orgId != ''"> -->
+<!-- 				AND c.id in (SELECT id from t_org where parent_ids -->
+<!-- 			    like concat('%',#{orgId},'%') or id = #{orgId}) -->
+<!-- 			</if> -->
+			<if test="level != null and level != ''">
+				AND a.level = #{level}
+			</if>
+		
+		</where>
+		 GROUP BY a.id
+	</select>
+
+	<select id="findAllList" resultType="TAlarmPolicy">
+		SELECT
+		<include refid="tAlarmPolicyColumns" />
+		FROM t_alarm_policy a
+		<include refid="tAlarmPolicyJoins" />
+		<where>
+
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+
+	<insert id="insert">
+		INSERT INTO t_alarm_policy(
+		id,
+		ch_id,
+		type_id,
+		ch_type,
+		org_id,
+		level,
+		low_value,
+		high_value
+		) VALUES (
+		#{id},
+		#{chId},
+		#{typeId},
+		#{chType},
+		#{orgId},
+		#{level},
+		#{lowValue},
+		#{highValue}
+		)
+	</insert>
+
+	<update id="update">
+		UPDATE t_alarm_policy SET
+		ch_id = #{chId},
+		type_id = #{typeId},
+		ch_type = #{chType},
+		org_id = #{orgId},
+		level = #{level},
+		low_value = #{lowValue},
+		high_value = #{highValue}
+		WHERE id = #{id}
+	</update>
+
+
+	<!--物理删除 -->
+	<update id="delete">
+		DELETE FROM t_alarm_policy
+		WHERE id = #{id}
+	</update>
+
+	<!--逻辑删除 -->
+	<update id="deleteByLogic">
+		UPDATE t_alarm_policy SET
+		del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+
+
+	<!-- 根据实体名称和字段名称和字段值获取唯一记录 -->
+	<select id="findUniqueByProperty" resultType="TAlarmPolicy" statementType="STATEMENT">
+		select * FROM t_alarm_policy where
+		${propertyName} = '${value}'
+	</select>
+	<!-- 获取level级别 -->
+	<select id="codeList" resultType="TCode">
+		select * from t_code c inner join t_code2 c2 on c2.id = c.id and c2.type_id = c.type_id
+		<where>
+		<if test="codeTypeId != null and codeTypeId != ''">
+		 and c.type_id = #{codeTypeId}
+		</if>
+		</where> 
+	</select>
+<!-- 获取通道主类型 -->
+	<select id="codeTypeList" resultType="TCodeType">
+		SELECT * FROM t_code_type where id =3
+	</select>
+
+</mapper>

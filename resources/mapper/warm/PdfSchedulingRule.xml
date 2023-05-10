@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cdsoft.modules.warm.dao.PdfSchedulingRuleDao">
+
+    <select id="findRuleList" parameterType="cn.cdsoft.modules.warm.entity.PdfSchedulingRule" resultType="map">
+        select a.id, a.org_id,b.name orgName,a.name,DATE_FORMAT(a.effective_date_end,'%Y/%m/%d') effectiveDateEnd,
+        DATE_FORMAT(a.effective_date_start,'%Y/%m/%d') effectiveDateStart,a.watchkeepers,a.create_date FROM pdf_scheduling_rule a
+        LEFT JOIN t_org b on a.org_id  =b.id
+        <where>
+            <if test="id != null and id != ''">
+                and a.id = #{id}
+            </if>
+            <if test="orgId != null and orgId != ''">
+                and b.parent_ids like '%${orgId}%'
+            </if>
+            <if test="name != null and name != ''">
+                and a.name like '%${name}%'
+            </if>
+            <if test="effectiveDateStart != null and effectiveDateStart != ''">
+                and str_to_date(a.effective_date_start,'%Y-%m-%d') &gt;= str_to_date(#{effectiveDateStart},'%Y-%m-%d')
+            </if>
+            <if test="effectiveDateEnd != null and effectiveDateEnd != ''">
+                and str_to_date(a.effective_date_end,'%Y-%m-%d') &gt;= str_to_date(#{effectiveDateEnd},'%Y-%m-%d')
+            </if>
+            <if test="watchkeepers != null and watchkeepers != ''">
+                and a.watchkeepers like '%${watchkeepers}%'
+            </if>
+        </where>
+        order by convert(b.name using gbk) collate gbk_chinese_ci asc,a.create_date desc
+    </select>
+
+    <insert id="addSchedulingRule" parameterType="cn.cdsoft.modules.warm.entity.PdfSchedulingRule" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        insert into pdf_scheduling_rule
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">
+                id,
+            </if>
+            <if test="name != null and name != ''">
+                name,
+            </if>
+            <if test="orgId != null and orgId != ''">
+                org_id,
+            </if>
+            <if test="effectiveDateStart != null and effectiveDateStart != ''">
+                effective_date_start,
+            </if>
+            <if test="effectiveDateEnd != null and effectiveDateEnd != ''">
+                effective_date_end,
+            </if>
+            <if test="createDate != null and createDate != ''">
+                create_date,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">
+                #{id},
+            </if>
+            <if test="name != null and name != ''">
+                #{name},
+            </if>
+            <if test="orgId != null and orgId != ''">
+                #{orgId},
+            </if>
+            <if test="effectiveDateStart != null and effectiveDateStart != ''">
+                #{effectiveDateStart},
+            </if>
+            <if test="effectiveDateEnd != null and effectiveDateEnd != ''">
+                #{effectiveDateEnd},
+            </if>
+            <if test="createDate != null and createDate != ''">
+                #{createDate},
+            </if>
+        </trim>
+    </insert>
+
+    <update id="updateRule" parameterType="cn.cdsoft.modules.warm.entity.PdfSchedulingRule">
+        update pdf_scheduling_rule set watchkeepers = #{watchkeepers} where id = #{id}
+    </update>
+
+    <select id="getMaxId" resultType="long">
+        select max(id) id from pdf_scheduling_rule
+    </select>
+
+    <resultMap id="orgMap" type="map">
+        <id property="id" column="id" javaType="String" />
+        <id property="pId" column="pId" javaType="String" />
+    </resultMap>
+
+    <select id="getFirstOrgList" parameterType="cn.cdsoft.modules.settings.entity.TOrg" resultMap="orgMap">
+        select id,name,type FROM  t_org
+        <where>
+            <if test="type==2 || type==3|| type==4|| type==5">
+                and parent_ids like '%${id}%' and type = #{type}
+            </if>
+            <if test="type ==6">
+                and id= #{id}
+            </if>
+        </where>
+    </select>
+<!--      添加排序 -->
+    <select id="getOrgList" parameterType="cn.cdsoft.modules.sys.entity.Area" resultMap="orgMap">
+        select id, parent_id pId,name from t_org where (id=#{id} or parent_ids like 
+        concat('%',#{id},'%')) and type &lt;=8 and del_flag = 0 order BY type asc,order_no
+    </select>
+
+
+    <resultMap id="userMap" type="map">
+        <id property="id" column="id" javaType="String" />
+    </resultMap>
+
+    <select id="getUserList"  resultMap="userMap">
+        select a.id, a.name from sys_user a LEFT JOIN t_org b on a.org_id  = b.id where b.id IN
+        <foreach collection="array" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="getUserList1" parameterType="cn.cdsoft.modules.settings.entity.TOrg" resultMap="userMap">
+        select a.id, a.name from sys_user a LEFT JOIN t_org b on a.org_id  = b.id where b.id = #{id} or b.parent_ids like '%${id}%'
+    </select>
+
+    <select id="getOrgById" parameterType="String" resultType="cn.cdsoft.modules.settings.entity.TOrg">
+        select parent_ids parentIds from t_org where id = #{id}
+    </select>
+
+    <delete id="deleteRules">
+        delete from pdf_scheduling_rule where id IN
+        <foreach collection="array" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+</mapper>

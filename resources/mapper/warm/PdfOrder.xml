@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cdsoft.modules.warm.dao.PdfOrderDao">
+    <resultMap id="OrderMap" type="map">
+        <id property="id" column="id" javaType="String" />
+        <id property="sendOrderUser" column="sendOrderUser" javaType="String" />
+        <id property="alarmAddr" column="alarmAddr" javaType="String" />
+    </resultMap>
+
+    <select id="findOrderById" parameterType="cn.cdsoft.modules.warm.entity.PdfOrder" resultMap="OrderMap">
+        select a.id,a.dev_id devId,a.alarm_type alarmType,a.prec,a.alarm_level alarmLevel,DATE_FORMAT(a.alarm_time,'%Y-%m-%d %H:%i:%s') alarmTime,a.alarm_addr alarmAddr,
+        a.send_order_user sendOrderUser,a.confirm_user confirmUser,a.suggestion,a.principal,a.state,a.alarm_cacel_time alarmCancelTime,concat(h.name,g.name,f.name,b.name) orgName,
+        c.name devName,d.name devTypeName,e.name sendName ,e.phone
+        from pdf_order a left join t_org b on a.alarm_addr = b.id left join t_device c on a.dev_id = c.id
+        left join t_code d on c.dev_type = d.id and c.type_id = d.type_id
+        left join sys_user e on a.send_order_user = e.id
+        left join t_org f on b.parent_id = f.id
+        left join t_org g on f.parent_id=g.id
+        left join t_org h on g.parent_id=h.id
+        where a.id = #{id}
+    </select>
+
+	<select id="findOrder" parameterType="cn.cdsoft.modules.warm.entity.PdfOrder" resultMap="OrderMap">
+		SELECT
+		a.id,c.id devId,co.name devTypeName,co.name devName,c.addr alarmAddr,
+		o.name buildingName,a.alarm_level alarmLevel,DATE_FORMAT(a.occur_time,'%Y-%m-%d %H:%i:%s') alarmTime
+		,o.name orgName,CONCAT(co.name,'报警') prec,ct.type_name alarmType,case when a.status is null then 0 else 1 end state
+		from t_alarm_log a
+		inner JOIN t_channel c on c.id = a.ch_id
+		left join t_code co on co.id = c.ch_type and co.type_id = c.type_id
+		left Join t_code_type ct on ct.id = co.type_id
+		left join t_device d on d.id = c.dev_id
+		left join t_org o on c.logic_org_id = o.id
+		where c.ch_type != 21
+		<if test="state == 0"> 
+		AND a.status is null
+		</if> 
+		<if test="state == 1">
+		AND a.status is not null
+		</if>
+		GROUP BY c.id ORDER BY a.occur_time desc
+	</select>
+
+    <select id="findOrder3" parameterType="cn.cdsoft.modules.warm.entity.PdfOrder" resultMap="OrderMap">
+        select a.id,a.dev_id devId,a.alarm_type alarmType,a.prec,a.alarm_level alarmLevel,DATE_FORMAT(a.alarm_time,'%Y-%m-%d %H:%i:%s') alarmTime,a.alarm_addr alarmAddr,
+        a.send_order_user sendOrderUser,a.confirm_user confirmUser,a.suggestion,a.principal,a.state,a.alarm_cacel_time alarmCancelTime,b.name orgName,
+        c.name devName,d.name devTypeName,e.name sendName ,e.phone,f.name buildingName
+        from pdf_order a left join t_org b on a.alarm_addr = b.id left join t_device c on a.dev_id = c.id
+        left join t_code d on c.dev_type = d.id and c.type_id = d.type_id
+        left join sys_user e on a.send_order_user = e.id
+        left join t_org f on b.parent_id = f.id
+        <where>
+            <if test="id != null and id != ''">
+                and a.id = #{id}
+            </if>
+            <if test="arr != null and arr != ''">
+                and (b.id in
+                <foreach collection="arr" index="index" item="item" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+                or b.parent_id in
+                <foreach collection="arr" index="index" item="item" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+                )
+            </if>
+            <if test="devId != null and devId != ''">
+                and a.dev_id = #{devId}
+            </if>
+            <if test="devType != null and devType != ''">
+                and d.id = #{devType}
+            </if>
+            <if test="typeId != null and typeId != ''">
+                and d.type_id = #{typeId}
+            </if>
+            <if test="alarmType != null and alarmType != ''">
+                and alarm_type = #{alarmType}
+            </if>
+            <if test="alarmLevel != null and alarmLevel != ''">
+                and a.alarm_level = #{alarmLevel}
+            </if>
+            <if test="confirmUser != null and confirmUser != ''">
+                and a.confirm_user = #{confirmUser}
+            </if>
+            <if test="alarmStartTime != null and alarmStartTime != ''">
+                and DATE_FORMAT(a.alarm_time,'%Y-%m-%d') &gt; DATE_FORMAT(#{alarmStartTime},'%Y-%m-%d')
+            </if>
+            <if test="alarmEndTime != null and alarmEndTime != ''">
+                and DATE_FORMAT(a.alarm_time,'%Y-%m-%d') &lt; DATE_FORMAT(#{alarmEndTime},'%Y-%m-%d')
+            </if>
+            <if test="sendOrderUser != null and sendOrderUser != ''">
+                and a.send_order_user = #{sendOrderUser}
+            </if>
+            <if test="principal != null and principal != ''">
+                and a.principal like '%${principal}%'
+            </if>
+            <if test="state != null and state != -1">
+                and a.state = #{state}
+            </if>
+            <if test="state == -1">
+                and a.state != 5
+            </if>
+            <if test="alarmCancelStart != null and alarmCancelStart != ''">
+                and DATE_FORMAT(a.alarm_cacel_time,'%Y-%m-%d') &gt; DATE_FORMAT(#{alarmCancelStart},'%Y-%m-%d')
+            </if>
+            <if test="alarmCancelEnd != null and alarmCancelEnd != ''">
+                and DATE_FORMAT(a.alarm_cacel_time,'%Y-%m-%d') &lt; DATE_FORMAT(#{alarmCancelEnd},'%Y-%m-%d')
+            </if>
+        </where>
+        order by a.alarm_time desc
+    </select>
+
+    <select id="getOrgByName" parameterType="cn.cdsoft.modules.settings.entity.TOrg" resultType="cn.cdsoft.modules.settings.entity.TOrg">
+        select id from t_org
+         <where>
+             <if test="id != null and id != ''">
+                 and id = #{id}
+             </if>
+             <if test="name != null and name != ''">
+                 and name like '%${name}%'
+             </if>
+             <if test="1==1">
+                 and type &lt; 5
+             </if>
+         </where>
+    </select>
+
+    <select id="getPdfByOrg" parameterType="cn.cdsoft.modules.settings.entity.TOrg" resultType="cn.cdsoft.modules.settings.entity.TOrg">
+        select id from t_org where (parent_ids like '%${id}%' or id = #{id}) and type = 5
+    </select>
+
+    <insert id="addOrder" parameterType="cn.cdsoft.modules.warm.entity.PdfOrder" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        insert into pdf_order
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">
+                id,
+            </if>
+            <if test="alarmType != null and alarmType != ''">
+                alarm_type,
+            </if>
+            <if test="alarmTime != null and alarmTime != ''">
+                alarm_time,
+            </if>
+            <if test="devId != null and devId != ''">
+                dev_id,
+            </if>
+            <if test="prec != null and prec != ''">
+                prec,
+            </if>
+            <if test="alarmLevel != null and alarmLevel != ''">
+                alarm_level,
+            </if>
+            <if test="alarmAddr != null and alarmAddr != ''">
+                alarm_addr,
+            </if>
+            <if test="principal != null and principal != ''">
+                principal,
+            </if>
+            <if test="suggestion != null and suggestion != ''">
+                suggestion,
+            </if>
+            <if test="sendOrderUser != null and sendOrderUser != ''">
+                send_order_user,
+            </if>
+            <if test="confirmUser != null and confirmUser != ''">
+                confirm_user,
+            </if>
+            <if test="alarmSource != null and alarmSource != ''">
+                alarm_source,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">
+                #{id},
+            </if>
+            <if test="alarmType != null and alarmType != ''">
+                #{alarmType},
+            </if>
+            <if test="alarmTime != null and alarmTime != ''">
+                #{alarmTime},
+            </if>
+            <if test="devId != null and devId != ''">
+                #{devId},
+            </if>
+            <if test="prec != null and prec != ''">
+                #{prec},
+            </if>
+            <if test="alarmLevel != null and alarmLevel != ''">
+                #{alarmLevel},
+            </if>
+            <if test="alarmAddr != null and alarmAddr != ''">
+                #{alarmAddr},
+            </if>
+            <if test="principal != null and principal != ''">
+                #{principal},
+            </if>
+            <if test="suggestion != null and suggestion != ''">
+                #{suggestion},
+            </if>
+            <if test="sendOrderUser != null and sendOrderUser != ''">
+                #{sendOrderUser},
+            </if>
+            <if test="confirmUser != null and confirmUser != ''">
+                #{confirmUser},
+            </if>
+            <if test="alarmSource != null and alarmSource != ''">
+                #{alarmSource},
+            </if>
+        </trim>
+    </insert>
+
+    <delete id="deleteOrderByIds">
+        delete from pdf_order where id IN
+        <foreach collection="array" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+    <select id="getUserByIds" resultType="cn.cdsoft.modules.sys.entity.User">
+        SELECT id,name,phone from sys_user where id in
+        <foreach collection="array" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <update id="updateOrder" parameterType="cn.cdsoft.modules.warm.entity.PdfOrder">
+       update t_alarm_log set STATUS = 1 where ch_id = #{id}
+    </update>
+
+    <select id="getDevById" parameterType="String" resultType="cn.cdsoft.modules.settings.entity.TDevice" >
+        select org_id orgId from t_device where id = #{id}
+    </select>
+
+    <select id="getFirstData" parameterType="cn.cdsoft.modules.warm.entity.PdfOrder" resultMap="OrderMap">
+        select f.state state1,f.date,a.id,a.dev_id devId,a.alarm_type alarmType,a.prec,a.alarm_level alarmLevel,DATE_FORMAT(a.alarm_time,'%Y-%m-%d %H:%i:%s') alarmTime,a.alarm_addr alarmAddr,
+        a.send_order_user sendOrderUser,a.confirm_user confirmUser,a.suggestion,a.principal,a.state,a.alarm_cacel_time alarmCancelTime,b.name orgName,
+        c.name devName,d.name devTypeName,e.name sendName ,e.phone
+        from pdf_order a left join t_org b on a.alarm_addr = b.id left join t_device c on a.dev_id = c.id
+        left join t_code d on c.dev_type = d.id and c.type_id = d.type_id
+        left join sys_user e on a.send_order_user = e.id
+        LEFT JOIN pdf_order_recorder f on a.id = f.order_id
+        where a.principal like '%${principal}%' and f.user_id = #{principal} and a.state !=5 and a.state = #{state} and (b.id = #{alarmAddr} or b.parent_ids like '%${alarmAddr}%') group by id order by a.alarm_time desc
+    </select>
+
+    <select id="getUnRecieve" parameterType="cn.cdsoft.modules.warm.entity.PdfOrder" resultMap="OrderMap">
+      select f.state state1,f.date,a.id,a.dev_id devId,a.alarm_type alarmType,a.prec,a.alarm_level alarmLevel,DATE_FORMAT(a.alarm_time,'%Y-%m-%d %H:%i:%s') alarmTime,a.alarm_addr alarmAddr,
+        a.send_order_user sendOrderUser,a.confirm_user confirmUser,a.suggestion,a.principal,a.state,a.alarm_cacel_time alarmCancelTime,b.name orgName,
+        c.name devName,d.name devTypeName,e.name sendName ,e.phone
+        from pdf_order a left join t_org b on a.alarm_addr = b.id left join t_device c on a.dev_id = c.id
+        left join t_code d on c.dev_type = d.id and c.type_id = d.type_id
+        left join sys_user e on a.send_order_user = e.id
+        LEFT JOIN pdf_order_recorder f on a.id = f.order_id
+        where a.principal like '%${principal}%' and a.state=2 and (b.id = #{alarmAddr} or b.parent_ids like '%${alarmAddr}%') group by id ORDER BY f.date desc
+    </select>
+    
+    <select id="getHistoryOrder" parameterType="cn.cdsoft.modules.warm.entity.PdfOrder" resultMap="OrderMap">
+        select a.id,a.dev_id devId,a.alarm_type alarmType,a.prec,a.alarm_level alarmLevel,DATE_FORMAT(a.alarm_time,'%Y-%m-%d %H:%i:%s') alarmTime,a.alarm_addr alarmAddr,
+        a.send_order_user sendOrderUser,a.confirm_user confirmUser,a.suggestion,a.principal,a.state,a.alarm_cacel_time alarmCancelTime,b.name orgName,
+        c.name devName,d.name devTypeName,e.name sendName ,e.phone
+        from pdf_order a left join t_org b on a.alarm_addr = b.id left join t_device c on a.dev_id = c.id
+        left join t_code d on c.dev_type = d.id and c.type_id = d.type_id
+        left join sys_user e on a.send_order_user = e.id
+        where a.principal like '%${principal}%' and a.state=5 and (b.id = #{alarmAddr} or b.parent_ids like '%${alarmAddr}%') group by id ORDER BY a.alarm_cacel_time desc
+    </select>
+
+    <resultMap id="devMap" type="map">
+        <id property="id" column="id" javaType="String" />
+    </resultMap>
+    <select id="getDevByOrg" parameterType="cn.cdsoft.modules.settings.entity.TOrg" resultMap="devMap">
+        select a.id,a.name from t_device a LEFT JOIN t_org b on a.org_id = b.id
+        where b.id = #{id} or b.parent_ids like '%${id}%'
+    </select>
+
+    <select id="getSendUserList" parameterType="Map" resultMap="devMap">
+        select a.id,a.name from sys_user a  left join t_org b on a.org_id = b.id left join sys_user_role c on a.id = c.user_id
+        left join sys_role d on c.role_id = d.id where b.id = #{orgId} or b.parent_ids like '%${orgId}%' GROUP BY id
+    </select>
+
+    <select id="countFirstPageAlarm" resultType="Map">
+        select count(*) count,d.id from pdf_order a left join t_device b on a.dev_id = b.id
+        left join t_code c on b.dev_type=c.id and b.type_id=c.type_id
+        left join pdf_dev_code d on c.id=d.code_id and c.type_id=d.code_type_id
+        where d.id in (4,3,6,5) and state=0 group by d.id
+    </select>
+    
+    <select id="findFirstPageOrder" parameterType="int" resultType="map">
+        select a.id, DATE_FORMAT(a.alarm_time,'%Y-%m-%d %H:%i:%s') alarmTime, a.alarm_type alarmType,a.prec from pdf_order a left join  t_device b on a.dev_id = b.id
+        left join t_code c on b.dev_type=c.id and b.type_id=c.type_id
+        left join pdf_dev_code d on c.id=d.code_id and c.type_id=d.code_type_id
+        where d.id=#{id} and state=0
+    </select>
+    
+    <select id="getUserByDev" parameterType="String" resultType="com.alibaba.fastjson.JSONObject">
+        select * from sys_user_org a
+        left join t_org b on a.org_id=b.id
+        left join t_org d on d.parent_id = b.id
+        left join t_device c on c.org_id = d.id
+        where c.id=#{devId}
+    </select>
+    
+    <select id="getBuildByDev" parameterType="String" resultType="String">
+        select a.parent_id from t_org a left join t_device b on a.id = b.org_id where b.id=#{devId}
+    </select>
+    
+    <select id="getAlarmByBuild" parameterType="cn.cdsoft.modules.settings.entity.TOrg" resultType="com.alibaba.fastjson.JSONObject">
+		select * 
+		FROM 
+		t_real_data tal 
+		inner join t_channel tc
+		on tal.id = tc.id LEFT JOIN t_device d on tc.dev_id = d.id
+		inner join t_org oo
+		on tc.logic_org_id = oo.id
+		where oo.code like '${code}%' and  tc.ch_type !=21 and 
+		(tal.real_value  =4 or tal.warn>0 or  (dev_type in (156,173) and tal.real_time &lt;= DATE_SUB(NOW(),INTERVAL 2 DAY))) ORDER BY tal.real_time desc
+    </select>
+    
+    
+     <select id="getChannel" resultType="cn.cdsoft.common.persistence.MapEntity">
+			select
+			IFNULL(tc.addr,'') addr,c.name,o.name orgName
+			from t_channel tc left join t_device td on td.id = tc.dev_id
+			left join t_org o on o.id = tc.logic_org_id
+			left join t_code c on c.id = tc.ch_type and c.type_id =tc.type_id
+			where tc.id = #{chId}
+     </select>
+</mapper>

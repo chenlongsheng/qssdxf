@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.maintenance.dao.PdfUserMaintenanceMessDao">
+
+
+
+
+
+	<select id="messagelist" resultType="PdfUserMaintenanceMess">
+		select
+		c.org_parent_id as orgParentId,b.org_id as orgId,d.name as orgName,e.name as codeName,c.code_id as
+		codeId,c.type_id as typeId,
+		f.name as ourName,f.not_use as notUse,
+		f.phone_one as PhoneOne,g.name as
+		maintenanceName,h.time_start as
+		timeStart,h.time_stop as timeStop,g.is_enable as isEnable
+		from
+		pdf_code_user_org b
+		left join
+		pdf_maintenance_code c on b.code_id =
+		c.code_id and b.type_id =c.type_id
+		LEFT JOIN t_org d on
+		b.org_id = d.id
+		LEFT
+		JOIN t_code e on b.code_id = e.id and
+		b.type_id = e.type_id
+		LEFT JOIN pdf_user f on b.user_id =
+		f.id
+		left join
+		pdf_maintenance g on c.maintenance_id = g.id
+		left join pdf_maintenance_detail h on c.main_detail_id =
+		h.id
+		<where>
+			b.org_id =c.org_id and b.order_no =1 and c.order_no = 1
+			<if test="orgId != null and orgId != ''">
+				AND b.org_id in (SELECT id from t_org where code like
+				concat((SELECT code from t_org where id = #{orgId}),'%') and type = 8)
+			</if>
+			<if test="codeId != null and codeId != ''">
+				AND c.code_id = #{codeId} and c.type_id = #{typeId}
+			</if>
+			<if test="ourName != null and ourName != ''">
+				AND f.name like concat('%',#{ourName},'%')
+			</if>
+			<if test="maintenanceName != null and maintenanceName != ''">
+				AND g.name like concat('%',#{maintenanceName},'%')
+			</if>
+			<if test="timeStart != null and timeStart !=''">
+				and h.time_start &gt;=concat(#{timeStart})
+			</if>
+			<if test="timeStop != null and timeStop != ''">
+				and h.time_stop &lt;= concat(#{timeStop},'23:59:59')
+			</if>
+		</where>
+		order by h.time_start
+	</select>
+
+	<!-- 我方人员详情 -->
+	<select id="userDetail" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT
+		concat(a.id) as id,
+		b.name as name ,a.order_no as orderNo,c.name as
+		positionName,
+		b.phone_one as
+		phoneOne,b.phone_two as phoneTwo,b.depart_org_id as departOrgId,
+		d.name as departOrgName,
+		b.not_use as
+		notUse,b.remarks as remarks
+		from
+		pdf_code_user_org a
+		inner join pdf_user b on a.user_id = b.id
+		INNER JOIN pdf_position c
+		on c.id = b.position_id
+		 LEFT JOIN t_org d on d.id= b.depart_org_id
+		where
+		a.code_id =#{codeId} and a.type_id = #{typeId} and a.org_id =#{orgId}
+		order BY a.order_no
+	</select>
+	<!-- 维保方人员详情 -->
+	<select id="maintenanceDetail" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT concat(a.id) as id,
+		concat(a.maintenance_id) as maintenanceId,
+		a.order_no as
+		orderNo,b.name
+		as maintenanceName,b.type as type,b.address as address,b.is_enable as isEnable,
+		b.remark as
+		remark
+		from
+		pdf_maintenance_code a INNER JOIN pdf_maintenance b on a.maintenance_id = b.id
+		where
+		a.code_id =#{codeId} and
+		a.type_id
+		= #{typeId} and a.org_id =#{orgId}
+		order by a.order_no
+	</select>
+	<!-- 改变我方人员的排序 -->
+	<update id="changeUserOrder">
+		UPDATE pdf_code_user_org set order_no =#{orderNo} where id = #{id}
+	</update>
+	<!-- 改变维保方的排序 -->
+	<update id="changeMainOrder">
+		UPDATE pdf_maintenance_code set order_no =#{orderNo} where id = #{id}
+	</update>
+
+
+</mapper>

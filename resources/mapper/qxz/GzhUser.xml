@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cdsoft.modules.qxz.dao.GzhUserDao">
+
+    <select id="findGzhUser" parameterType="cn.cdsoft.modules.qxz.entity.GzhUser" resultType="cn.cdsoft.modules.qxz.entity.GzhUser">
+        select id,image,org_ids orgIds,parent_org_ids parentOrgIds,login_name loginName,keyword,open_id openId,prec,password,phone,email,
+        user_role userRole,state,type,desct,create_by createBy,create_date createDate from gzh_user
+        <where>
+            <if test="id != null and id != ''">
+                and id = #{id}
+            </if>
+            <if test="openId != null and openId != ''">
+                and open_id = #{openId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and keyword = #{keyword}
+            </if>
+        </where>
+    </select>
+
+    <insert id="addGzhUser" parameterType="cn.cdsoft.modules.qxz.entity.GzhUser">
+        insert into gzh_user
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">
+                id,
+            </if>
+            <if test="image != null and image != ''">
+                image,
+            </if>
+            <if test="orgIds != null and orgIds != ''">
+                org_ids,
+            </if>
+            <if test="loginName != null and loginName != ''">
+                login_name,
+            </if>
+            <if test="keyword != null and keyword != ''">
+                keyword,
+            </if>
+            <if test="openId != null and openId != ''">
+                open_id,
+            </if>
+            <if test="prec != null and prec != ''">
+                prec,
+            </if>
+            <if test="password != null and password != ''">
+                password,
+            </if>
+            <if test="phone != null and phone != ''">
+                phone,
+            </if>
+            <if test="email != null and email != ''">
+                email,
+            </if>
+            <if test="userRole != null and userRole != ''">
+                user_role,
+            </if>
+            <if test="state != null">
+                state,
+            </if>
+            <if test="type != null">
+                type,
+            </if>
+            <if test="desct != null and desct != ''">
+                desct,
+            </if>
+            <if test="createBy != null and createBy != ''">
+                create_by,
+            </if>
+            <if test="createDate != null and createDate != ''">
+                create_date,
+            </if>
+            <if test="parentOrgIds != null and parentOrgIds != ''">
+                parent_org_ids,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">
+                #{id},
+            </if>
+            <if test="image != null and image != ''">
+                #{image},
+            </if>
+            <if test="orgIds != null and orgIds != ''">
+                #{orgIds},
+            </if>
+            <if test="loginName != null and loginName != ''">
+                #{loginName},
+            </if>
+            <if test="keyword != null and keyword != ''">
+                #{keyword},
+            </if>
+            <if test="openId != null and openId != ''">
+                #{openId},
+            </if>
+            <if test="prec != null and prec != ''">
+                #{prec},
+            </if>
+            <if test="password != null and password != ''">
+                #{password},
+            </if>
+            <if test="phone != null and phone != ''">
+                #{phone},
+            </if>
+            <if test="email != null and email != ''">
+                #{email},
+            </if>
+            <if test="userRole != null and userRole != ''">
+                #{userRole},
+            </if>
+            <if test="state != null">
+                #{state},
+            </if>
+            <if test="type != null">
+                #{type},
+            </if>
+            <if test="desct != null and desct != ''">
+                #{desct},
+            </if>
+            <if test="createBy != null and createBy != ''">
+                #{createBy.id},
+            </if>
+            <if test="createDate != null and createDate != ''">
+                DATE_FORMAT(#{createDate},'%Y-%m-%d'),
+            </if>
+            <if test="parentOrgIds != null and parentOrgIds != ''">
+                #{parentOrgIds}
+            </if>
+        </trim>
+    </insert>
+
+    <update id="updateGzhUser" parameterType="cn.cdsoft.modules.qxz.entity.GzhUser">
+        UPDATE gzh_user
+        <set>
+            <if test="id != null and id != ''">
+                id = #{id},
+            </if>
+            <if test="image != null and image != ''">
+                image= #{image},
+            </if>
+            <if test="orgIds != null and orgIds != ''">
+                org_ids = #{orgIds},
+            </if>
+            <if test="loginName != null and loginName != ''">
+                login_name = #{loginName},
+            </if>
+            <if test="keyword != null and keyword != ''">
+                keyword = #{keyword},
+            </if>
+            <if test="openId != null and openId != ''">
+                open_id = #{openId},
+            </if>
+            <if test="prec != null and prec != ''">
+                prec = #{prec},
+            </if>
+            <if test="password != null and password != ''">
+                password = #{password},
+            </if>
+            <if test="phone != null and phone != ''">
+                phone = #{phone},
+            </if>
+            <if test="email != null and email!=''">
+                email = #{email},
+            </if>
+            <if test="userRole != null and userRole !=''" >
+                user_role = #{userRole},
+            </if>
+            <if test="state != null">
+                state = #{state},
+            </if>
+            <if test="type != null">
+                type = #{type},
+            </if>
+            <if test="desct != null and desct != ''">
+                desct = #{desct},
+            </if>
+            <if test="createBy != null and createBy != ''">
+                create_by = #{createBy.id},
+            </if>
+            <if test="createDate != null and createDate != ''">
+                create_date = DATE_FORMAT(#{createDate},'%Y-%m-%d'),
+            </if>
+            <if test="parentOrgIds != null and parentOrgIds != ''">
+                parent_org_ids = #{parentOrgIds},
+            </if>
+        </set>
+       where id = #{id}
+    </update>
+
+    <delete id="deleteUser" >
+        delete from gzh_user where id IN
+        <foreach collection="array" open="(" separator="," close=")" item="haha">
+            #{haha}
+        </foreach>
+    </delete>
+
+
+    <resultMap id="orgListResult" type="map">
+        <id property="id" column="id" javaType="String" />
+        <id property="pId" column="pId" javaType="String" />
+        <id property="name" column="name" javaType="String" />
+        <id property="type" column="type" javaType="String" />
+    </resultMap>
+    <select id="findOrgTree" parameterType="cn.cdsoft.modules.settings.entity.TOrg" resultMap="orgListResult">
+        select id,parent_id pId,name,type,parent_ids parentIds from t_org where type in (1,2,3,4,5) and (id = #{id} or parent_ids like '%${id}%')
+    </select>
+    
+    <select id="findListByPage" parameterType="cn.cdsoft.modules.qxz.entity.GzhUser" resultType="Map">
+        select id,image,org_ids orgIds,parent_org_ids parentOrgIds,login_name loginName,keyword,open_id openId,prec,password,phone,email,
+        user_role userRole,state,type,desct,create_by createBy,create_date createDate from gzh_user
+        <where>
+            <if test="id != null and id != ''">
+                and id = #{id}
+            </if>
+            <if test="image != null and image != ''">
+                and image = #{image}
+            </if>
+            <if test="orgIds != null and orgIds != ''">
+                and org_ids = #{orgIds}
+            </if>
+            <if test="loginName != null and loginName != ''">
+                and login_name = #{loginName}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and keyword = #{keyword}
+            </if>
+            <if test="openId != null and openId != ''">
+                and open_id like '%${openId}%'
+            </if>
+            <if test="prec != null and prec != ''">
+                and prec like '%${prec}%'
+            </if>
+            <if test="password != null and password != ''">
+                and password = #{password}
+            </if>
+            <if test="phone != null and phone != ''">
+                and phone = #{phone}
+            </if>
+            <if test="email != null and email != ''">
+                and email = #{email}
+            </if>
+            <if test="userRole != null and userRole != ''">
+                and userRole = #{userRole}
+            </if>
+            <if test="state != null">
+                and state = #{state}
+            </if>
+            <if test="type != null">
+                and type = #{type}
+            </if>
+            <if test="desct != null and desct != ''">
+                and desct = #{desct}
+            </if>
+            <if test="createBy != null and createBy != ''">
+                and createBy = #{createBy}
+            </if>
+            <if test="createDate != null and createDate != ''">
+                and createDate = #{createDate}
+            </if>
+            <if test="parentOrgIds != null and parentOrgIds != ''">
+                and parent_org_ids like '%${parentOrgIds}%'
+            </if>
+        </where>
+        <choose>
+            <when test="page !=null and page.orderBy != null and page.orderBy != ''">
+                ORDER BY a.${page.orderBy}
+            </when>
+            <otherwise>
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="count" parameterType="cn.cdsoft.modules.qxz.entity.GzhUser" resultType="int">
+        select count(*) from gzh_user
+        <where>
+            <if test="id != null and id != ''">
+                and id = #{id}
+            </if>
+            <if test="image != null and image != ''">
+                and image = #{image}
+            </if>
+            <if test="orgIds != null and orgIds != ''">
+                and org_ids = #{orgIds}
+            </if>
+            <if test="loginName != null and loginName != ''">
+                and login_name = #{loginName}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and keyword = #{keyword}
+            </if>
+            <if test="openId != null and openId != ''">
+                and open_id = #{openId}
+            </if>
+            <if test="prec != null and prec != ''">
+                and prec = #{prec}
+            </if>
+            <if test="password != null and password != ''">
+                and password = #{password}
+            </if>
+            <if test="phone != null and phone != ''">
+                and phone = #{phone}
+            </if>
+            <if test="email != null and email != ''">
+                and email = #{email}
+            </if>
+            <if test="userRole != null and userRole != ''">
+                and userRole = #{userRole}
+            </if>
+            <if test="state != null">
+                and state = #{state}
+            </if>
+            <if test="type != null">
+                and type = #{type}
+            </if>
+            <if test="desct != null and desct != ''">
+                and desct = #{desct}
+            </if>
+            <if test="createBy != null and createBy != ''">
+                and createBy = #{createBy}
+            </if>
+            <if test="createDate != null and createDate != ''">
+                and createDate = #{createDate}
+            </if>
+        </where>
+    </select>
+
+
+    <resultMap id="plotsListResult" type="map">
+        <id property="id" column="id" javaType="String" />
+        <id property="pId" column="pId" javaType="String" />
+        <id property="name" column="name" javaType="String" />
+
+    </resultMap>
+    <select id="plotsTree" parameterType="cn.cdsoft.modules.settings.entity.TOrg" resultMap="plotsListResult">
+        select a.id,a.parent_id pId,a.name from sys_office a LEFT JOIN t_org b ON a.area_id = b.id
+        where b.id = #{id} or b.parent_ids like '%${id}%'
+    </select>
+
+    <select id="roleTree" resultMap="plotsListResult" parameterType="java.util.List">
+        select a.id,a.office_id pId,a.name from sys_role a
+        LEFT JOIN sys_office b on a.office_id = b.id LEFT JOIN t_org c on b.area_id = c.id where b.id in
+        <foreach collection="list" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="orgRoleList" resultType="map">
+        select c.name orgName,c.id orgId from t_org c
+        where c.id in
+        <foreach collection="array" open="(" separator="," close=")" item="haha">
+            #{haha}
+        </foreach>
+    </select>
+
+    <select id="roleList" resultType="map">
+        select a.name ,a.id,b.id officeId,b.area_id areaId from sys_role a LEFT JOIN sys_office b on a.office_id=b.id
+        where a.id in
+        <foreach collection="array" open="(" separator="," close=")" item="haha">
+            #{haha}
+        </foreach>
+    </select>
+
+    <select id="findOrgByArr" resultType="cn.cdsoft.modules.settings.entity.TOrg">
+        select name from t_org c
+        where c.id in
+        <foreach collection="array" open="(" separator="," close=")" item="haha">
+            #{haha}
+        </foreach>
+    </select>
+
+    <select id="findRoleByArr" resultType="cn.cdsoft.modules.sys.entity.Role">
+        select name from sys_role c
+        where c.id in
+        <foreach collection="array" open="(" separator="," close=")" item="haha">
+            #{haha}
+        </foreach>
+    </select>
+    
+    <select id="getAllGzhUser" resultType="cn.cdsoft.modules.qxz.entity.GzhUser">
+        select *from gzh_user
+    </select>
+</mapper>

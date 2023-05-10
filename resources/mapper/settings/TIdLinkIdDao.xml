@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.settings.dao.TIdLinkIdDao">
+    
+	<sql id="tIdLinkIdColumns">
+		a.id AS "id",
+		a.src_id AS "srcId",
+	
+		a.dest_id AS "destId",
+
+		a.link_type AS "linkType",
+		a.param AS "param",
+		a.not_use AS "notUse",
+		
+		ar.name AS "tChannel.name",
+		ch.name AS "tChannel.destName",
+		ch.id AS "tChannel.destId",
+		co.name AS "coName",
+		deco.name AS "decoName",	
+		link.name AS "linkName",	
+		a.del_flag AS "delFlag",
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate"
+	</sql>
+	
+	<sql id="tIdLinkIdJoins">
+	   LEFT JOIN t_channel ar ON ar.id = a.src_id
+	   LEFT JOIN t_channel ch ON ch.id = a.dest_id
+	   LEFT JOIN t_code  co ON ar.ch_type = co.id and ar.type_id = co.type_id
+       LEFT JOIN t_code  deco ON ch.ch_type = deco.id and ch.type_id = deco.type_id
+       LEFT JOIN (select * from t_code where type_id=5) link ON link.id = a.link_type
+	</sql>
+	
+	<select id="codeList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select * from t_code where type_id=5
+	</select>
+    
+	<select id="get" resultType="TIdLinkId" >
+		SELECT 
+			<include refid="tIdLinkIdColumns"/>
+		FROM t_id_link_id a
+		     <include refid="tIdLinkIdJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="TIdLinkIdList" resultType="cn.cdsoft.common.persistence.MapEntity" >
+		SELECT 
+			<include refid="tIdLinkIdColumns"/>
+		FROM t_id_link_id a
+		<include refid="tIdLinkIdJoins"/>
+		<where>
+<!-- 			a.del_flag = #{DEL_FLAG_NORMAL} -->
+			<if test="tChannelSrcId != null and tChannelSrcId != ''">
+				AND ar.id = #{tChannelSrcId}
+			</if>		
+			<if test="tChannelDestId != null and tChannelDestId != ''">
+				AND ch.id = #{tChannelDestId}
+			</if>		
+			<if test="linkType != null and linkType != ''">
+				AND a.link_type = #{linkType}
+			</if>
+			<if test="notUse != null and notUse != ''">
+				AND a.not_use = #{notUse}
+			</if>
+		</where>
+			order by a.create_date desc
+<!-- 		<choose> -->
+<!-- 			<when test="page !=null and page.orderBy != null and page.orderBy != ''"> -->
+<!-- 				ORDER BY ${page.orderBy} -->
+<!-- 			</when> -->
+<!-- 			<otherwise> -->
+<!-- 				ORDER BY a.update_date DESC -->
+<!-- 			</otherwise> -->
+<!-- 		</choose> -->
+	</select>
+	
+	<select id="findAllList" resultType="TIdLinkId" >
+		SELECT 
+			<include refid="tIdLinkIdColumns"/>
+		FROM t_id_link_id a
+		<include refid="tIdLinkIdJoins"/>
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO t_id_link_id(
+			
+			src_id,
+	    	
+			dest_id,
+			link_type,
+			param,
+			not_use,
+			del_flag,
+			create_by,
+			create_date,
+			update_by,
+			update_date
+		) VALUES (
+			
+			#{srcId},			
+			#{destId},
+			#{linkType},
+			#{param},
+			#{notUse},
+			#{delFlag},
+			#{createBy.id},
+			#{createDate},
+			#{updateBy.id},
+			#{updateDate}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE t_id_link_id SET 	
+			src_id = #{srcId},
+			
+			dest_id = #{destId},
+			link_type = #{linkType},
+			param = #{param},
+			not_use = #{notUse},
+			update_by = #{updateBy.id},
+			update_date = #{updateDate}
+		WHERE id = #{id}
+	</update>
+	
+	<!-- 	更改启用禁用 -->
+	<update id="saveUse">
+     update t_id_link_id SET not_use = #{notUse}
+     WHERE id = #{id}
+	</update>
+	
+	<!--物理删除-->
+	<update id="delete">
+		DELETE FROM t_id_link_id
+		WHERE id = #{id}
+	</update>
+	
+	<!--逻辑删除-->
+	<update id="deleteByLogic">
+		UPDATE t_id_link_id SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+	
+	<!-- 根据实体名称和字段名称和字段值获取唯一记录 -->
+	<select id="findUniqueByProperty" resultType="TIdLinkId" statementType="STATEMENT">
+		select * FROM t_id_link_id  where ${propertyName} = '${value}'
+	</select>
+	
+	<!--     联动区域底下的 通道显示 -->
+	<select id="findAreaList" resultType="Area">
+		(SELECT
+		concat(a.id) as id ,a.name as name,concat(a.parent_id) as "parent.id",a.type as type
+		from t_org a
+		where a.code like concat('%','1035030201','%')
+		ORDER BY type,a.order_no
+		)
+		UNION ALL
+		(SELECT concat(b.id) as id, b.name as name,concat(b.logic_org_id) as "parent.id",b.del_flag as type from t_channel b	
+		<where>
+		<if test ="name != null and name != ''">
+         and  b.name like concat('%',#{name},'%')
+        </if>
+		</where>
+		)
+	</select>
+	
+	
+	<!-- 获取联动视频列表 -->
+	<select id="getVideoChannelLinkList" resultType="cn.cdsoft.common.persistence.MapEntity" >
+		SELECT 
+		d.dev_type devType,
+       dd.ip,
+       dd.port,
+       uname,
+       upwd,
+       ch.ch_no chNo,
+       ch.ch_type chType,
+       ch.type_id typeId,
+			<include refid="tIdLinkIdColumns"/>
+		FROM t_id_link_id a
+			<include refid="tIdLinkIdJoins"/>
+			 left join t_device d on d.id = ch.dev_id
+             left join t_device_detail dd on dd.id= d.id
+		<where>
+		ar.id = #{channelSrcId}
+		AND a.link_type = 5
+		AND a.not_use = 0
+		</where>
+	</select>
+	
+	
+</mapper>

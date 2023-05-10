@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.settings.dao.TDeviceConfigDao">
+    
+	<sql id="tDeviceConfigColumns">
+		a.id AS "id",
+		a.project_name AS "projectName",
+		a.table_name AS "tableName",
+		a.prefix AS "prefix",
+		a.row_name AS "rowName",
+		a.model_name AS "modelName",
+		a.chinese_name AS "chineseName",
+		a.must_choose AS "mustChoose",
+		a.show_field AS "showField",
+		a.only_read AS "onlyRead",
+		a.order_no AS "orderNo"
+	</sql>
+	
+	<sql id="tDeviceConfigJoins">
+	</sql>
+	
+    
+	<select id="get" resultType="TDeviceConfig" >
+		SELECT 
+			<include refid="tDeviceConfigColumns"/>
+		FROM t_device_config a
+		<include refid="tDeviceConfigJoins"/>
+		WHERE a.id = #{id}
+	</select>
+	
+	<select id="findList" resultType="TDeviceConfig" >
+		SELECT 
+			<include refid="tDeviceConfigColumns"/>
+		FROM t_device_config a
+		<include refid="tDeviceConfigJoins"/>
+		<where>
+			
+			<if test="projectName != null and projectName != ''">
+				AND a.project_name = #{projectName}
+			</if>
+			<if test="rowName != null and rowName != ''">
+				AND a.row_name = #{rowName}
+			</if>
+			<if test="chineseName != null and chineseName != ''">
+				AND a.chinese_name = #{chineseName}
+			</if>
+			<if test="showField != null and showField != ''">
+				AND a.show_field = #{showField}
+			</if>
+			<if test="onlyRead != null and onlyRead != ''">
+				AND a.only_read = #{onlyRead}
+			</if>
+		</where>
+		ORDER BY a.show_field desc,a.order_no asc,a.only_read desc
+	</select>
+	
+	<select id="findAllList" resultType="TDeviceConfig" >
+		SELECT 
+			<include refid="tDeviceConfigColumns"/>
+		FROM t_device_config a
+		<include refid="tDeviceConfigJoins"/>
+		<where>
+			
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO t_device_config(
+			id,
+			project_name,
+			table_name,
+			row_name,
+			chinese_name,
+			show_field,
+			only_read,
+			order_no
+		) VALUES (
+			#{id},
+			#{projectName},
+			#{tableName},
+			#{rowName},
+			#{chineseName},
+			#{showField},
+			#{onlyRead},
+			#{orderNo}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE t_device_config SET 	
+			project_name = #{projectName},
+			table_name = #{tableName},
+			row_name = #{rowName},
+			chinese_name = #{chineseName},
+			show_field = #{showField},
+			only_read = #{onlyRead},
+			order_no = #{orderNo}
+		WHERE id = #{id}
+	</update>
+	
+	
+	<update id="updateConfig">
+		UPDATE t_device_config SET 	
+			show_field = #{showField},
+			only_read = #{onlyRead}
+		WHERE id = #{id}
+	</update>
+	
+	
+	<!--物理删除-->
+	<update id="delete">
+		DELETE FROM t_device_config
+		WHERE id = #{id}
+	</update>
+	
+	<!--逻辑删除-->
+	<update id="deleteByLogic">
+		UPDATE t_device_config SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+	
+	
+	<!-- 根据实体名称和字段名称和字段值获取唯一记录 -->
+	<select id="findUniqueByProperty" resultType="TDeviceConfig" statementType="STATEMENT">
+		select * FROM t_device_config  where ${propertyName} = '${value}'
+	</select>
+<!-- 	list中可选的项 -->
+	 <select id="configList" resultType="TDeviceConfig">
+       select 
+       <include refid="tDeviceConfigColumns"/>
+        from t_device_config a where a.show_field=1
+        and project_name =#{projectName}
+        ORDER BY a.show_field desc,a.order_no desc,a.only_read desc
+    </select>
+   
+<!--     from表单中可选的项 -->
+    <select id="deviceFromList" resultType="TDeviceConfig">
+       select 
+       <include refid="tDeviceConfigColumns"/>
+        from t_device_config a where a.show_field=1 and a.must_choose=0
+        and project_name = #{projectName}
+        	ORDER BY a.show_field desc,a.order_no desc,a.only_read desc
+    </select>
+<!-- 	获取工程名 -->
+	<select id="configName" resultType="java.lang.String">
+	    select project_name from t_device_config
+	    where project_name IS not NULL GROUP BY project_name 
+	</select>
+</mapper>

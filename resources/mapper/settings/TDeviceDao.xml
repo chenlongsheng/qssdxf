@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.settings.dao.TDeviceDao">
+
+	<sql id="tDeviceColumns">
+		a.id AS "id",
+		a.org_id AS "orgId",
+		a.dev_type AS "devType",
+		a.parent_id AS "parentId",
+		a.type_id AS "typeId",
+		a.name AS "name",
+		a.addr AS "addr",
+		a.picture_path as "picturePath",
+		a.unit_type AS "unitType",
+		a.firmware_version AS
+		"firmwareVersion",
+		a.vendor_information AS
+		"vendorInformation",
+		a.coords_x AS
+		"coordsX",
+		a.coords_y AS "coordsY",
+		a.sn AS
+		"sn",
+		a.order_no AS
+		"orderNo",
+		a.not_use AS
+		"notUse",
+		ar.name AS "area.name",
+		ar.parent_ids AS "area.parentIds",
+		a.del_flag
+		AS "delFlag",
+		a.create_by AS
+		"createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS
+		"updateDate",
+		a.remarks AS
+		"remarks"
+	</sql>
+
+	<sql id="tDeviceJoins">
+		LEFT JOIN t_org ar ON ar.id = a.org_id
+	</sql>
+
+
+	<select id="get" resultType="TDevice">
+		SELECT
+		b.name as parentName,
+		<include refid="tDeviceColumns" />
+		FROM t_device a
+		<include refid="tDeviceJoins" />
+		LEFT JOIN t_device b on b.id = a.parent_id
+		WHERE a.id = #{id}
+	</select>
+
+	<!-- 获取from -->
+
+	<select id="getDeviceFrom" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select ${deviceFromList} from t_device a
+		LEFT JOIN t_device_detail b on
+		a.id = b.id
+		LEFT JOIN t_code c on a.dev_type = c.id
+		and a.type_id = c.type_id
+		LEFT JOIN t_org d on a.org_id = d.id
+		where
+		a.id = #{id}
+	</select>
+
+
+	<select id="findList" resultType="TDevice">
+		SELECT
+		<include refid="tDeviceColumns" />
+		FROM t_device a
+		<include refid="tDeviceJoins" />
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+			<if test="orgId != null and orgId != ''">
+				AND a.org_id = #{orgId}
+			</if>
+			<if test="parentId != null and parentId != ''">
+				AND a.parent_id = #{parentId}
+			</if>
+			<if test="devType != null and devType != ''">
+				AND a.dev_type = #{devType}
+			</if>
+			<if test="typeId != null and typeId != ''">
+				AND a.type_id = #{typeId}
+			</if>
+			<if test="name != null and name != ''">
+				AND a.name LIKE
+				<if test="dbName == 'oracle'">'%'||#{name}||'%'</if>
+				<if test="dbName == 'mssql'">'%'+#{name}+'%'</if>
+				<if test="dbName == 'mysql'">concat('%',#{name},'%')</if>
+			</if>
+			<if test="addr != null and addr != ''">
+				AND a.addr = #{addr}
+			</if>
+			<if test="sn != null and sn != ''">
+				AND a.sn = #{sn}
+			</if>
+			<if test="notUse != null and notUse != ''">
+				AND a.not_use = #{notUse}
+			</if>
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+	<!-- 更新orgID下的区域 -->
+	<update id="updateChannel">
+		UPDATE t_channel set logic_org_id = #{orgId} where dev_id = #{devId}
+	</update>
+
+	<!-- SELECT * FROM t_org where code like '%103501%' -->
+	<select id="deviceList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select ${nameConfig} from t_device a
+		LEFT JOIN t_device_detail b on a.id = b.id
+		LEFT JOIN t_code c on a.dev_type = c.id
+		and a.type_id = c.type_id
+		LEFT JOIN t_org d on a.org_id = d.id
+		<where>
+			a.del_flag = 0 AND a.org_id in (SELECT id from t_org where parent_ids
+			like concat('%',#{orgId},'%') or id = #{orgId})
+			<if test="name != null and name !=''">
+				AND a.name like concat('%',#{name},'%')
+			</if>
+			<if test="codeName != null and codeName !=''">
+				AND c.name = #{codeName}
+			</if>
+			<if test="notUse != null and notUse !=''">
+				AND a.not_use = #{notUse}
+			</if>
+		</where>
+		order by a.create_date desc,a.id desc
+	</select>
+
+	<select id="codeList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select * from t_code2 where type_id=1
+	</select>
+
+	<select id="deviceAllList" resultType="TDevice">
+		SELECT
+		<include refid="tDeviceColumns" />
+		FROM t_device a
+		<include refid="tDeviceJoins" />
+	</select>
+
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id"
+		parameterType="cn.cdsoft.modules.settings.entity.TDevice">
+		INSERT INTO t_device(
+		parent_id,
+		org_id,
+		dev_type,
+		type_id,
+		name,
+		addr,
+		unit_type,
+		firmware_version,
+		vendor_information,
+		sn,
+		order_no,
+		not_use,
+		del_flag,
+		create_by,
+		create_date,
+		update_by,
+		update_date,
+		remarks
+		) VALUES (
+		#{parentId},
+		#{orgId},
+		#{devType},
+		1,
+		#{name},
+		#{addr},
+		#{unitType},
+		#{firmwareVersion},
+		#{vendorInformation},
+		#{sn},
+		#{orderNo},
+		#{notUse},
+		#{delFlag},
+		#{createBy.id},
+		#{createDate},
+		#{updateBy.id},
+		#{updateDate},
+		#{remarks}
+		)
+	</insert>
+
+
+	<update id="update">
+		UPDATE t_device SET
+		parent_id = #{parentId},
+		org_id = #{orgId},
+		dev_type = #{devType},
+		type_id =
+		#{typeId},
+		name = #{name},
+		addr =#{addr},
+		unit_type = #{unitType},
+		firmware_version = #{firmwareVersion},
+		vendor_information = #{vendorInformation},
+		del_flag = #{delFlag},
+		coords_x = #{coordsX},
+		coords_y = #{coordsY},
+		sn =
+		#{sn},
+		order_no = #{orderNo},
+		not_use = #{notUse},
+		update_by =
+		#{updateBy.id},
+		update_date = #{updateDate},
+		remarks =
+		#{remarks}
+		WHERE id = #{id}
+	</update>
+	<!-- 更改启用禁用 -->
+	<update id="saveUse">
+		update t_device SET not_use = #{notUse}
+		WHERE id = #{id}
+	</update>
+
+	<!--物理删除 -->
+	<!-- <update id="delete"> -->
+	<!-- DELETE FROM t_device -->
+	<!-- WHERE id = #{id} -->
+	<!-- </update> -->
+	<!--逻辑删除 -->
+	<update id="delete">
+		UPDATE t_device SET
+		del_flag = 1
+		WHERE id = #{id}
+	</update>
+
+	<!-- 物理删除 t_device_detail -->
+	<update id="deleteDetail">
+		DELETE FROM t_device_detail
+		WHERE id = #{id}
+	</update>
+
+	<!--逻辑删除 -->
+	<update id="deleteByLogic">
+		UPDATE t_device SET
+		del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+
+
+	<!-- 根据实体名称和字段名称和字段值获取唯一记录 -->
+	<select id="findUniqueByProperty" resultType="TDevice" statementType="STATEMENT">
+		select * FROM t_device where
+		${propertyName} = '${value}'
+	</select>
+	<!-- 修改上传设备图片 -->
+	<update id="updatePic">
+		UPDATE t_device set picture_path = #{picturePath} where id = #{id}
+	</update>
+	<!-- 获取设备区域下集合 -->
+	<select id="devicePic" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select a.id,a.name from t_device a left JOIN t_channel b
+		on a.id = b.dev_id
+		where a.org_id = #{orgId} and a.coords_x IS NULL and
+		a.coords_y IS NULL
+		and a.dev_type=#{coldId}
+	</select>
+	<!-- select id,name from t_device where org_id = #{orgId} and coords_x IS NULL and -->
+	<!-- coords_y IS NULL -->
+	<!-- and dev_type=#{coldId} -->
+	<!-- 保存设拖动的设备 -->
+	<update id="updateCoords">
+		UPDATE t_device set coords_x =#{coordX},coords_y =#{coordY} where id = #{id}
+	</update>
+
+</mapper>

@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.sys.dao.AreaDao">
+
+	<sql id="areaColumns">
+		a.id,
+		a.parent_id AS "parent.id",
+		a.parent_id AS parentId,
+		a.parent_ids,
+		a.code,
+		a.name,
+		a.order_no AS "orderNo",
+		a.type,
+		a.remarks,
+		a.create_by AS "createBy.id",
+		a.create_date,
+		a.update_by AS "updateBy.id",
+		a.update_date,
+		a.del_flag,
+		a.image AS "image",
+		p.name AS "parent.name"
+	</sql>
+
+	<sql id="areaJoins">
+		LEFT JOIN sys_office p ON p.id = a.parent_id
+	</sql>
+
+	<select id="get" resultType="Area">
+		SELECT
+		<include refid="areaColumns" />
+		FROM t_org a
+		<include refid="areaJoins" />
+		WHERE a.id = #{id}
+	</select>
+
+	<select id="findList" resultType="Area">
+		SELECT
+		<include refid="areaColumns" />
+		FROM t_org a
+		<include refid="areaJoins" />
+		WHERE a.del_flag = #{DEL_FLAG_NORMAL}
+		<!-- 数据范围过滤 -->
+		${sqlMap.dsf}
+		OR a.id = #{currentUser.office.area.id}
+		ORDER BY a.code
+	</select>
+
+	<select id="findAllList" resultType="Area">
+		SELECT
+		<include refid="areaColumns" />
+		FROM t_org a
+		<include refid="areaJoins" />
+		WHERE
+		a.parent_id =0 or
+		a.code like concat('1035','%') and
+		a.del_flag = #{DEL_FLAG_NORMAL}
+		ORDER BY a.code
+	</select>
+
+
+	<select id="userOrgList" resultType="Area">
+		SELECT
+		<include refid="areaColumns" />
+		from t_org a
+		<include refid="areaJoins" />
+		where a.id in (SELECT id from t_org where parent_ids
+		like concat('%',#{orgId},'%') or a.id = #{orgId})
+		ORDER BY a.code
+	</select>
+
+
+
+
+	<!-- 获取区域code -->
+	<select id="selectCode" resultType="java.lang.String">
+		select code from t_org a where a.id = #{orgId}
+	</select>
+	<!-- 获取区域底下最大code -->
+	<select id="maxCode" resultType="java.lang.String">
+		select MAX(code) from t_org a where a.parent_id = #{orgId}
+	</select>
+
+	<select id="findByParentIdsLike" resultType="Area">
+	SELECT
+	a.id,
+	a.parent_id AS "parent.id",
+	a.parent_ids
+	FROM t_org a
+	WHERE
+	a.del_flag = #{DEL_FLAG_NORMAL} AND a.parent_ids LIKE #{parentIds}
+	ORDER BY a.code
+	</select>
+
+	<insert id="insert">
+		INSERT INTO t_org(
+		id,
+		parent_id,
+		parent_ids,
+		code,
+		name,
+		order_no,
+		type,
+		create_by,
+		create_date,
+		update_by,
+		update_date,
+		remarks,
+		del_flag
+		) VALUES (
+		#{id},
+		#{parent.id},
+		#{parentIds},
+		#{code},
+		#{name},
+		#{orderNo},
+		#{type},
+		#{createBy.id},
+		#{createDate},
+		#{updateBy.id},
+		#{updateDate},
+		#{remarks},
+		#{delFlag}
+		)
+	</insert>
+
+	<update id="update">
+		UPDATE t_org SET
+		parent_id = #{parent.id},
+		parent_ids = #{parentIds},
+		code = #{code},
+		image = #{image},
+		name = #{name},
+		order_no = #{orderNo},
+		type = #{type},
+		update_by = #{updateBy.id},
+		update_date = #{updateDate},
+		remarks =
+		#{remarks}
+		WHERE id = #{id}
+	</update>
+
+	<update id="saveImage">
+		UPDATE t_org SET
+		image = #{image}
+		WHERE id = #{id}
+	</update>
+
+	<update id="updateParentIds">
+		UPDATE t_org SET
+		parent_id = #{parent.id},
+		parent_ids = #{parentIds}
+		WHERE id = #{id}
+	</update>
+
+	<update id="delete">
+		DELETE FROM t_org
+		WHERE id = #{id} OR parent_ids LIKE
+		<if test="dbName == 'oracle'">'%,'||#{id}||',%'</if>
+		<if test="dbName == 'mysql'">CONCAT('%,', #{id}, ',%')</if>
+	</update>
+
+	<update id="deleteByLogic">
+		UPDATE t_org SET
+		del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id} OR parent_ids LIKE
+		<if test="dbName == 'oracle'">'%,'||#{id}||',%'</if>
+		<if test="dbName == 'mysql'">CONCAT('%,', #{id}, ',%')</if>
+	</update>
+
+	<update id="updateSonOrg">
+		update t_org SET type = #{type} where parent_id = #{parentId}
+	</update>
+</mapper>

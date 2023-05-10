@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.settings.dao.TCodeDao">
+    
+	<sql id="tCodeColumns">
+		a.id AS "id",
+		a.name AS "name",
+		a.type_id AS "typeId",
+		a.order_no AS "orderNo",
+		a.monad AS "monad",
+		a.icon_skin AS "iconSkin",
+		a.warn_icon_skin AS "warnIconSkin",
+		a.offline_icon_skin AS "offlineIconSkin",
+		a.defence_icon_skin AS "defenceIconSkin",
+	    a.withdrawing_icon_skin AS "withdrawingIconSkin",
+	    a.sideway_icon_skin AS "sidewayIconSkin",
+		
+		
+		b.type_name AS "tCodeType.typeName",
+		b.type_desc AS "tCodeType.typeDest"
+		
+	</sql>
+	
+	<sql id="tCodeJoins">
+	LEFT JOIN t_code_type b ON a.type_id = b.id
+	</sql>
+	
+    
+	<select id="getCode" resultType="TCode" >
+		SELECT 
+			<include refid="tCodeColumns"/>
+		FROM t_code a
+		<include refid="tCodeJoins"/>
+		WHERE a.id = #{id} and a.type_id = #{typeId}
+	</select>
+	
+	
+	<select id="findCodeList" resultType="TCode">
+	    SELECT 
+			<include refid="tCodeColumns"/>
+		FROM t_code a
+		<include refid="tCodeJoins"/>
+		inner join t_code2 co on co.id = a.id and co.type_id  = a.type_id
+		<where>
+		    <if test="id != null and id != ''">
+				AND a.id = #{id}
+			</if>
+			<if test="name != null and name != ''">
+				AND a.name LIKE concat('%',#{name},'%')
+			</if>
+			<if test="typeId != null and typeId != ''">
+				AND a.type_id = #{typeId}
+			</if>
+		</where>
+			ORDER BY b.id,a.id
+	</select>
+	
+	
+	<select id="findList" resultType="TCode" >
+		SELECT 
+			<include refid="tCodeColumns"/>
+		FROM t_code a
+		<include refid="tCodeJoins"/>
+		<where>
+			
+			<if test="id != null and id != ''">
+				AND a.id = #{id}
+			</if>
+			<if test="name != null and name != ''">
+				AND a.name LIKE 
+					<if test="dbName == 'oracle'">'%'||#{name}||'%'</if>
+					<if test="dbName == 'mssql'">'%'+#{name}+'%'</if>
+					<if test="dbName == 'mysql'">concat('%',#{name},'%')</if>
+			</if>
+			<if test="typeId != null and typeId != ''">
+				AND a.type_id = #{typeId}
+			</if>
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="findAllList" resultType="TCode" >
+		SELECT 
+			<include refid="tCodeColumns"/>
+		FROM t_code a
+		<include refid="tCodeJoins"/>
+		<where>
+			
+		</where>		
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+			</otherwise>
+		</choose>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO t_code(
+			id,
+			name,
+			type_id,
+			order_no,
+			monad,
+			icon_skin,
+			warn_icon_skin,
+			offline_icon_skin,
+			defence_icon_skin,
+			withdrawing_icon_skin,
+			sideway_icon_skin      
+		) VALUES (
+			#{id},
+			#{name},
+			#{typeId},
+			#{orderNo},
+			#{monad},
+			#{iconSkin},
+			#{warnIconSkin},
+			#{offlineIconSkin},
+			#{defenceIconSkin},
+			#{withdrawingIconSkin},
+			#{sidewayIconSkin}
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE t_code SET 	
+			name = #{name},
+<!-- 			type_id = #{typeId}, -->
+			order_no = #{orderNo},
+			monad = #{monad},
+			icon_skin = #{iconSkin},
+			warn_icon_skin = #{warnIconSkin},
+			offline_icon_skin = #{offlineIconSkin},
+			defence_icon_skin = #{defenceIconSkin},
+			withdrawing_icon_skin = #{withdrawingIconSkin},
+			sideway_icon_skin = #{sidewayIconSkin}			
+		WHERE id = #{id} and type_id = #{typeId}
+	</update>
+	
+	
+	<!--物理删除-->
+	<update id="delete">
+		DELETE FROM t_code
+		WHERE id = #{id} and type_id = #{typeId}
+	</update>
+	
+	<!--逻辑删除-->
+	<update id="deleteByLogic">
+		UPDATE t_code SET 
+			del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id} and type_id=#{typeId}
+	</update>
+	
+	
+	<!-- 根据实体名称和字段名称和字段值获取唯一记录 -->
+	<select id="findUniqueByProperty" resultType="TCode" statementType="STATEMENT">
+		select * FROM t_code  where ${propertyName} = '${value}'
+	</select>
+	
+</mapper>

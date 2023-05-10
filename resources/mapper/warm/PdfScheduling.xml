@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.cdsoft.modules.warm.dao.PdfSchedulingDao">
+
+    <insert id="addScheduling" parameterType="cn.cdsoft.modules.warm.entity.PdfScheduling" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        insert into pdf_scheduling
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">
+                id,
+            </if>
+            <if test="ruleId != null and ruleId != ''">
+                rule_id,
+            </if>
+            <if test="periodStart != null and periodStart != ''">
+                period_start,
+            </if>
+            <if test="periodEnd != null and periodEnd != ''">
+                period_end,
+            </if>
+            <if test="startTime != null and startTime != ''">
+                start_time,
+            </if>
+            <if test="endTime != null and endTime != ''">
+                end_time,
+            </if>
+            <if test="watchkeeper != null and watchkeeper != ''">
+                watchkeeper,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">
+                #{id},
+            </if>
+            <if test="ruleId != null and ruleId != ''">
+                #{ruleId},
+            </if>
+            <if test="periodStart != null and periodStart != ''">
+                #{periodStart},
+            </if>
+            <if test="periodEnd != null and periodEnd != ''">
+                #{periodEnd},
+            </if>
+            <if test="startTime != null and startTime != ''">
+                #{startTime},
+            </if>
+            <if test="endTime != null and endTime != ''">
+                #{endTime},
+            </if>
+            <if test="watchkeeper != null and watchkeeper != ''">
+                #{watchkeeper},
+            </if>
+        </trim>
+    </insert>
+
+    <select id="findSchedulingByRuleId" parameterType="String" resultType="map">
+          select id,rule_id ruleId,period_start periodStart,period_end periodEnd,start_time startTime,end_time endTime,watchkeeper
+          from pdf_scheduling where rule_id = #{ruleId}
+    </select>
+
+    <insert id="addSchedulingDetail" parameterType="cn.cdsoft.modules.warm.entity.PdfSchedulingDetail">
+        insert into pdf_scheduling_detail
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">
+                id,
+            </if>
+            <if test="schedulingId != null and schedulingId != ''">
+                scheduling_id,
+            </if>
+            <if test="schedulingDate != null and schedulingDate != ''">
+                scheduling_date,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null and id != ''">
+                #{id},
+            </if>
+            <if test="schedulingId != null and schedulingId != ''">
+                #{schedulingId},
+            </if>
+            <if test="schedulingDate != null and schedulingDate != ''">
+                #{schedulingDate},
+            </if>
+        </trim>
+    </insert>
+
+    <select id="findSchedulings" parameterType="cn.cdsoft.modules.warm.entity.PdfSchedulingRule" resultType="map">
+        select c.name,c.org_id,d.name orgName,DATE_FORMAT(a.scheduling_date,'%Y/%m/%d') schedulingDate,b.start_time,b.end_time,b.watchkeeper from pdf_scheduling_detail a
+        LEFT JOIN pdf_scheduling b on a.scheduling_id = b.id
+        LEFT JOIN pdf_scheduling_rule c on b.rule_id = c.id
+        LEFT JOIN t_org d on c.org_id = d.id
+        <where>
+            <if test="name != null and name != ''">
+                and c.name like '%${name}%'
+            </if>
+            <if test="orgId != null and orgId != ''">
+                and d.parent_id like '%${orgId}%'
+            </if>
+            <if test="effectiveDateStart != null and effectiveDateStart != ''">
+                and str_to_date(a.scheduling_date,'%Y-%m-%d') &gt;= str_to_date(#{effectiveDateStart},'%Y-%m-%d')
+            </if>
+            <if test="effectiveDateEnd != null and effectiveDateEnd != ''">
+                and str_to_date(a.scheduling_date,'%Y-%m-%d') &lt;= str_to_date(#{effectiveDateEnd},'%Y-%m-%d')
+            </if>
+            <if test="watchkeepers != null and watchkeepers != ''">
+                and b.watchkeeper like '%${watchkeepers}%'
+            </if>
+        </where>
+        order by a.scheduling_date desc, convert(d.name using gbk) collate gbk_chinese_ci asc,c.create_date desc
+    </select>
+
+    <resultMap id="userMap" type="map">
+        <id property="id" column="id" javaType="String" />
+    </resultMap>
+
+    <select id="findSchedulingUser" parameterType="cn.cdsoft.modules.warm.entity.PdfSchedulingRule" resultType="String">
+        (select b.watchkeeper from pdf_scheduling_detail a
+        LEFT JOIN pdf_scheduling b on a.scheduling_id = b.id
+        LEFT JOIN pdf_scheduling_rule c on b.rule_id = c.id
+        LEFT JOIN t_org d on c.org_id = d.id
+        where c.org_id = #{orgId} and str_to_date(a.scheduling_date,'%Y-%m-%d')=str_to_date(#{effectiveDateStart},'%Y-%m-%d'))
+    </select>
+
+    <delete id="deleteSchedulings">
+        delete from pdf_scheduling where rule_id in
+        <foreach collection="array" index="index" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+</mapper>

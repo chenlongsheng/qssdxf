@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.cdsoft.modules.settings.dao.TChannelDao">
+
+	<sql id="tChannelColumns">
+		a.id AS "id",
+		a.dev_id AS "devId",
+		a.logic_org_id AS "logicOrgId",
+		a.ch_no AS "chNo",
+		a.ch_type AS "chType",
+		a.type_id AS "typeId",
+		a.name AS "name",
+		a.coords_x AS "coordsX",
+		a.coords_y AS "coordsY",
+		a.param0 AS "param0",
+		a.param1 AS "param1",
+
+		a.not_use AS "notUse",
+		a.del_flag AS "delFlag",
+		a.ext_params AS "extParams",
+		ar.name AS "area.name",
+		ar.parent_ids AS "area.parentIds",
+		ar.code AS "orgCode",
+
+		a.create_by AS "createBy.id",
+		a.create_date AS "createDate",
+		a.update_by AS "updateBy.id",
+		a.update_date AS "updateDate"
+	</sql>
+	
+	
+	<sql id="tChannelJoins">
+		LEFT JOIN t_org ar ON ar.id = a.logic_org_id
+	</sql>
+
+	<select id="getDeviveName" resultType="cn.cdsoft.common.persistence.MapEntity">
+    	select 
+    	concat(org_id) orgId,
+    	name,
+    	IFNULL(addr,'') addr,
+    	d.dev_type devType 
+    	from t_device d
+    	where d.id = #{devId}
+    </select>
+    
+	<select id="channelList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select a.id as coId,a.name as chName,a.logic_org_id as orgId,a.ch_no as chNo, a.ch_type as chType,a.coords_x as
+		coordsX,
+		a.coords_y as coordsY,a.param0 ,a.param1,b.id as chId,b.name as coName,b.type_id as coTypeId,c.id as devId,c.dev_type as
+		devType,
+		c.name as devName,d.name as orgName,d.code as orgCode
+		from t_channel a left join t_code b on b.type_id = a.type_id and b.id = a.ch_type
+		left join t_device c on a.dev_id = c.id
+		left join t_org d on a.logic_org_id = d.id
+		<where>
+			<if test="tDeviceId != null and tDeviceId != ''">
+				AND c.id = #{tDeviceId}
+			</if>
+			<if test="chName != null and chName != ''">
+				AND a.name like concat('%',#{chName},'%')
+			</if>
+			<if test="codeName != null and codeName != ''">
+				AND b.name = #{codeName}
+			</if>
+			<if test="notUse != null and notUse != ''">
+				AND a.not_use = #{notUse}
+			</if>
+			<if test="orgId != null and orgId != ''">
+				AND a.logic_org_id in (SELECT id from t_org where parent_ids
+				like concat('%',#{orgId},'%') or id = #{orgId})
+			</if>
+		</where>
+		order by a.create_date desc
+	</select>
+
+	<!-- <if test="loginOrg != null and loginOrg != ''"> -->
+	<!-- AND a.logic_org_id = #{loginOrg} -->
+	<!-- </if> -->
+	<!-- <if test="orgId != null and orgId != ''"> -->
+	<!-- AND a.logic_org_id in (SELECT id from t_org where parent_ids -->
+	<!-- like concat('%',#{orgId},'%') or id = #{orgId}) -->
+	<!-- </if> -->
+
+	<select id="get" resultType="TChannel">
+		SELECT
+		b.name as devName,
+		b.dev_type as devType,
+		IFNULL(b.addr,'') addr,		
+		IFNULL(a.addr,'') chAddr,	
+		<include refid="tChannelColumns" />
+		FROM t_channel a
+		<include refid="tChannelJoins" />
+		left join t_device b on a.dev_id = b.id
+		WHERE a.id = #{id}
+	</select>
+
+	<!-- <select id="getChannel" resultType="cn.cdsoft.common.persistence.MapEntity"> -->
+	<!-- select *,a.id as coId ,b.id as id,c.name as deviceName,c.id as devId from t_code a -->
+	<!-- inner join t_channel b on a.type_id = b.type_id and a.id = b.ch_type -->
+	<!-- inner join t_device c on a.type_id = c.type_id -->
+	<!-- WHERE b.id = #{id} -->
+	<!-- </select> -->
+
+	<select id="orgList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		SELECT * from t_org
+		<where>
+			<if test="orgId != null and orgId != ''">
+				and parent_ids like concat('%',#{orgId},'%') or id = #{orgId}
+			</if>
+		</where>
+	</select>
+
+
+	<select id="typeList" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select * from t_code2 where type_id !=1
+	</select>
+	<!-- select * from t_code where type_id in (2,3,4,5,10,11) -->
+	<select id="findList" resultType="TChannel">
+		SELECT
+		<include refid="tChannelColumns" />
+		FROM t_channel a
+		<include refid="tChannelJoins" />
+		<where>
+			a.del_flag = #{DEL_FLAG_NORMAL}
+			<if test="devId != null and devId != ''">
+				AND a.dev_id = #{devId}
+			</if>
+			<if test="logicOrgId != null and logicOrgId != ''">
+				AND a.logic_org_id = #{logicOrgId}
+			</if>
+			<if test="chNo != null and chNo != ''">
+				AND a.ch_no = #{chNo}
+			</if>
+			<if test="chType != null and chType != ''">
+				AND a.ch_type = #{chType}
+			</if>
+			<if test="typeId != null and typeId != ''">
+				AND a.type_id = #{typeId}
+			</if>
+			<if test="name != null and name != ''">
+				AND a.name LIKE
+				<if test="dbName == 'oracle'">'%'||#{name}||'%'</if>
+				<if test="dbName == 'mssql'">'%'+#{name}+'%'</if>
+				<if test="dbName == 'mysql'">concat('%',#{name},'%')</if>
+			</if>
+			<if test="notUse != null and notUse != ''">
+				AND a.not_use = #{notUse}
+			</if>
+		</where>
+		<choose>
+			<when test="page !=null and page.orderBy != null and page.orderBy != ''">
+				ORDER BY ${page.orderBy}
+			</when>
+			<otherwise>
+				ORDER BY a.update_date DESC
+			</otherwise>
+		</choose>
+	</select>
+
+	<select id="findAllList" resultType="TChannel">
+		SELECT
+		<include refid="tChannelColumns" />
+		FROM t_channel a
+		<include refid="tChannelJoins" />
+		<!-- <where> -->
+		<!-- a.del_flag = #{DEL_FLAG_NORMAL} -->
+		<!-- </where> -->
+		<!-- <choose> -->
+		<!-- <when test="page !=null and page.orderBy != null and page.orderBy != ''"> -->
+		<!-- ORDER BY ${page.orderBy} -->
+		<!-- </when> -->
+		<!-- <otherwise> -->
+		<!-- ORDER BY a.update_date DESC -->
+		<!-- </otherwise> -->
+		<!-- </choose> -->
+	</select>
+
+	<insert id="insert">
+		INSERT INTO t_channel(
+
+		dev_id,
+		logic_org_id,
+		ch_no,
+		ch_type,
+		type_id,
+		name,
+		param0,
+		param1,
+		not_use,
+		del_flag,
+		ext_params,
+		create_by,
+		create_date,
+		update_by,
+		update_date
+		) VALUES (
+
+		#{devId},
+		#{logicOrgId},
+		#{chNo},
+		#{chType},
+		#{typeId},
+		#{name},
+		#{param0},
+		#{param1},
+		#{notUse},
+		#{delFlag},
+		#{extParams},
+		#{createBy.id},
+		#{createDate},
+		#{updateBy.id},
+		#{updateDate}
+		)
+	</insert>
+
+	<update id="update">
+		UPDATE t_channel SET
+		dev_id = #{devId},
+		logic_org_id = #{logicOrgId},
+		ch_no = #{chNo},
+		ch_type = #{chType},
+		type_id = #{typeId},
+		name = #{name},
+		coords_x = #{coordsX},
+		coords_y = #{coordsY},
+		param0 = #{param0},
+		param1 = #{param1},
+		not_use = #{notUse},
+		ext_params = #{extParams},
+		update_by = #{updateBy.id},
+		update_date = #{updateDate}
+		WHERE id = #{id}
+	</update>
+	<!-- 根据设备id,修改区域 -->
+	<update id="updateOrg">
+		UPDATE t_channel set logic_org_id = #{orgId} where dev_id = #{devId}
+	</update>
+
+	<!--物理删除 -->
+	<update id="delete">
+		DELETE FROM t_channel
+		WHERE id = #{id}
+	</update>
+
+	<!--逻辑删除 -->
+	<update id="deleteByLogic">
+		UPDATE t_channel SET
+		del_flag = #{DEL_FLAG_DELETE}
+		WHERE id = #{id}
+	</update>
+
+	<!-- 根据实体名称和字段名称和字段值获取唯一记录 -->
+	<select id="findUniqueByProperty" resultType="TChannel" statementType="STATEMENT">
+		select * FROM t_channel where
+		${propertyName} = '${value}'
+	</select>
+
+	<select id="findByDevType" resultType="TChannel">
+		SELECT *
+		FROM t_channel a
+		WHERE a.dev_id = #{devId} AND a.type_id =
+		#{typeId}
+	</select>
+
+
+	<select id="findByDevTypeCode" resultType="TChannel">
+		SELECT *
+		FROM t_channel a
+		WHERE a.dev_id = #{devId} AND a.type_id =
+		#{typeId} AND a.ch_type =#{Code}
+	</select>
+
+	<select id="getRealDataByChId" resultType="java.util.HashMap">
+		SELECT id,real_value AS "realValue"
+		FROM t_real_data a
+		WHERE a.id =
+		#{chId}
+	</select>
+
+	<!--物理删除通过设备id -->
+	<update id="deleteByDevId">
+		DELETE FROM t_channel
+		WHERE dev_id = #{devId}
+	</update>
+
+	<!-- 获取通道区域下集合 -->
+	<select id="channelPic" resultType="cn.cdsoft.common.persistence.MapEntity">
+		select id,name from t_channel where logic_org_id = #{orgId} and coords_x IS
+		NULL and
+		coords_y IS NULL
+		and ch_type=#{coldId} and type_id= #{typeId}
+	</select>
+	<!-- 保存设拖动的通道 -->
+	<update id="updateCoords">
+		UPDATE t_channel set coords_x =#{coordX},coords_y =#{coordY} where id = #{id}
+	</update>
+
+</mapper>
